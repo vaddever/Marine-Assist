@@ -66,6 +66,13 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .theme-btn{background:none;border:1px solid rgba(255,255,255,.18);color:var(--hull-muted);width:36px;height:36px;border-radius:50%;cursor:pointer;flex-shrink:0}
 .acct-btn{background:none;border:1px solid rgba(255,255,255,.28);color:var(--hull-ink);padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;flex-shrink:0;max-width:180px;overflow:hidden;text-overflow:ellipsis}
 .acct-btn:hover{border-color:var(--signal)}
+.acct{position:relative;flex-shrink:0}
+.acct-menu{position:absolute;right:0;top:calc(100% + 8px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;min-width:240px;box-shadow:0 14px 34px rgba(4,16,30,.28);padding:6px;z-index:40}
+.acct-menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:6px;cursor:pointer;font-weight:500;color:var(--ink)}
+.acct-menu button:hover{background:var(--surface-2)}
+.acct-menu #menuOut{color:var(--alarm)}
+.acct-email{padding:8px 12px 10px;font-size:13.5px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
+.admin-note{margin:24px 0 0}
 
 /* Account */
 .auth{max-width:440px;margin:32px 0 64px}
@@ -333,7 +340,10 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
   .sheet .sh-to{grid-template-columns:1fr}
   .brand span{display:none}
   .brand b{font-size:24px}
-  .top .wrap{gap:12px}
+  .top .wrap{gap:10px;flex-wrap:wrap;min-height:0;padding-top:10px}
+  .acct{margin-left:auto}
+  .nav{order:3;width:100%;margin-left:0;justify-content:space-between}
+  .nav button{padding:10px 8px}
   .hero .wrap{padding-top:36px}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
@@ -351,7 +361,15 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
       <button data-view="requests">Request board</button>
       <button data-view="register" id="navBiz">List your business</button>
     </nav>
-    <button class="acct-btn" id="acctBtn" data-go="register">Sign in</button>
+    <div class="acct">
+      <button class="acct-btn" id="acctBtn" aria-haspopup="true" aria-expanded="false">Sign in</button>
+      <div class="acct-menu" id="acctMenu" hidden>
+        <p class="acct-email" id="acctEmail"></p>
+        <button type="button" data-go="register" id="menuWs">Workspace</button>
+        <button type="button" data-go="admin" id="menuAdmin" hidden>Admin: listing approvals</button>
+        <button type="button" id="menuOut">Sign out</button>
+      </div>
+    </div>
     <button class="theme-btn" id="themeBtn" aria-label="Switch light or dark mode">◐</button>
   </div>
 </header>
@@ -488,6 +506,12 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
         </aside>
       </div>
     </div><!-- /wsBox -->
+
+    <div class="status live admin-note" id="adminNote" hidden>
+      <b>You’re signed in as the admin</b>
+      <span>New business registrations wait for you in Admin. You only need to fill in the form below if you also want to list a business of your own.</span>
+      <p style="margin-top:12px"><button class="btn" data-go="admin">Open admin approvals</button></p>
+    </div>
 
     <div class="reg" id="regBox" hidden>
       <ol class="steps" id="steps">
@@ -831,10 +855,28 @@ function onAuthChange(){
   if(!$("#view-register").hidden) renderBiz();
   if(!$("#view-admin").hidden) renderAdmin();
 }
+async function doSignOut(){
+  await Auth.signOut(); editingId = null; state.ws = {cases:[],docs:[],tab:"requests",loaded:false};
+  state.admin = false; authMode = "signin"; updateAcctBtn(); toast("Signed out");
+  if(!$("#view-admin").hidden) renderAdmin(); else show("register");
+}
+$("#acctBtn").addEventListener("click", e => {
+  e.stopPropagation();
+  if(!Auth.user){ show("register"); return; }
+  const m = $("#acctMenu"); m.hidden = !m.hidden; e.currentTarget.setAttribute("aria-expanded", String(!m.hidden));
+});
+document.addEventListener("click", e => { if(!e.target.closest(".acct")) { $("#acctMenu").hidden = true; $("#acctBtn").setAttribute("aria-expanded","false"); } });
+document.addEventListener("keydown", e => { if(e.key==="Escape" && !$("#acctMenu").hidden){ $("#acctMenu").hidden = true; $("#acctBtn").focus(); } });
+$("#menuOut").addEventListener("click", doSignOut);
+$("#acctMenu").addEventListener("click", e => { if(e.target.closest("[data-go]")) $("#acctMenu").hidden = true; });
 function updateAcctBtn(){
   const b = $("#acctBtn"), u = Auth.user;
   b.textContent = u ? "My account" : "Sign in";
   b.title = u ? u.email : "";
+  $("#acctMenu").hidden = true; b.setAttribute("aria-expanded","false");
+  $("#acctEmail").textContent = u ? "Signed in as "+u.email : "";
+  $("#menuWs").textContent = u && myListing() ? "Workspace" : "Register your business";
+  $("#menuAdmin").hidden = !isAdminUser();
   $("#navBiz").textContent = u && myListing() ? "Workspace" : "List your business";
 }
 
@@ -1103,6 +1145,7 @@ function renderBiz(){
   $("#authBox").hidden = !!u;
   $("#wsBox").hidden = !(u && mine && !editingId);
   $("#regBox").hidden = !(u && (!mine || editingId));
+  $("#adminNote").hidden = !(u && !mine && !editingId && isAdminUser());
   if(!u){
     $("#bizTitle").textContent = "List your marine business";
     $("#bizLede").textContent = "Freelance engineers, workshops, parts shops and marine companies can list for free. Create an account to register, then sign in any time to update your listing.";
@@ -1151,7 +1194,7 @@ function setupAuth(){
     if(!email) return $("#authErr").textContent = "Enter your email above first.";
     try { toast(await Auth.reset(email)); } catch(x){ $("#authErr").textContent = x.message; }
   };
-  $("#signOutBtn").onclick = async () => { await Auth.signOut(); editingId = null; state.ws = {cases:[],docs:[],tab:"requests",loaded:false}; state.admin = false; authMode = "signin"; updateAcctBtn(); toast("Signed out"); renderBiz(); };
+  $("#signOutBtn").onclick = doSignOut;
   $("#editBtn").onclick = () => { const m = myListing(); if(!m) return; editingId = m.id; fillForm(m); step = 0; renderBiz(); window.scrollTo(0,0); };
   $("#viewPublicBtn").onclick = () => { const m = myListing(); if(m) openProvider(m.id); };
   $("#pauseBtn").onclick = async () => {
