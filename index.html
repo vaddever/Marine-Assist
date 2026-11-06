@@ -277,6 +277,13 @@ footer b{color:var(--hull-ink)}
 .bank code{font-size:17px;letter-spacing:.03em}
 .bank-row{display:grid;grid-template-columns:1.2fr 1.3fr 1.3fr 100px 44px;gap:8px;margin-bottom:8px;align-items:end}
 .cdoc{margin-bottom:16px}
+.stages{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.stages li{font-size:13.5px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.stages li.done{background:var(--lagoon-soft);color:var(--lagoon);border-color:transparent}
+.stages li.on{background:var(--lagoon);color:#fff;border-color:transparent}
+.updates{margin-top:14px;border-left:2px solid var(--line);padding-left:14px}
+.upd{padding:6px 0}
+.upd p{margin-top:2px}
 .payline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .paid-note{margin-top:14px;font-weight:600;color:var(--lagoon)}
 .btn.on-dark{background:transparent;color:var(--hull-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
@@ -440,8 +447,9 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
 <section class="view" id="view-requests" hidden>
   <div class="page-head"><div class="wrap">
     <h1>Request board</h1>
-    <p>Describe the problem with your boat and where it is. Providers who can help will call you or send you a quotation on WhatsApp.</p>
-    <div class="actions"><button class="btn signal" id="postJobBtn">Post a request</button></div>
+    <p>Describe the problem with your boat and where it is. A business takes your request, then keeps you updated with progress, quotations and invoices.</p>
+    <div class="actions"><button class="btn signal" id="postJobBtn">Post a request</button><button class="btn on-dark" data-act="track">Track my request</button></div>
+    <p class="hint" style="color:var(--hull-muted);margin-top:14px">Run a marine business? <a href="#register" data-go="register" style="color:var(--signal)">Sign in</a> to take jobs from this board and manage them.</p>
   </div></div>
   <div class="wrap section">
     <div class="job-filters">
@@ -800,7 +808,14 @@ const Store = (() => {
   async function get(c,id){ if(db){ const d=await db.collection(c).doc(id).get(); return d.exists ? {id:d.id,...d.data()} : null; } return (read(c)||[]).find(x=>x.id===id) || null; }
   async function query(c,f,v){ if(db){ const q=await db.collection(c).where(f,"==",v).get(); return q.docs.map(d=>({id:d.id,...d.data()})); } return (read(c)||[]).filter(x=>x[f]===v); }
   async function remove(c,id){ if(db){ await db.collection(c).doc(id).delete(); return; } write(c,(read(c)||[]).filter(x=>x.id!==id)); }
-  return {init,list,add,update,remove,get,query};
+  function newId(c){ return db ? db.collection(c).doc().id : uid(); }
+  async function set(c,id,o){ if(db){ await db.collection(c).doc(id).set(o); return {id,...o}; } const a=(read(c)||[]).filter(x=>x.id!==id); const n={id,...o}; a.push(n); write(c,a); return n; }
+  async function claim(c,id,patch,ok){
+    const msg = "Another business has already taken this job.";
+    if(db){ const ref=db.collection(c).doc(id); await db.runTransaction(async tx => { const snap=await tx.get(ref); if(!snap.exists || !ok(snap.data())) throw new Error(msg); tx.update(ref, patch); }); return; }
+    const a=read(c)||[], i=a.findIndex(x=>x.id===id); if(i<0 || !ok(a[i])) throw new Error(msg); a[i]={...a[i],...patch}; write(c,a);
+  }
+  return {init,list,add,update,remove,get,query,newId,set,claim};
 })();
 
 /* ============ ACCOUNTS (Firebase Auth or local demo) ============ */
@@ -891,6 +906,7 @@ async function refresh(){ [state.providers, state.jobs] = await Promise.all([Sto
 /* ============ NAVIGATION ============ */
 const VIEWS = ["find","requests","register","admin"];
 function show(view){
+  if(view && view.startsWith("j=")){ $$("dialog[open]").forEach(d=>d.close()); renderCustomerJob(decodeURIComponent(view.slice(2))); return; }
   if(view && view.startsWith("c=")){ $$("dialog[open]").forEach(d=>d.close()); renderCustomerCase(decodeURIComponent(view.slice(2))); return; }
   if(!VIEWS.includes(view)) view = "find";
   $$(".view").forEach(v => v.hidden = v.id !== "view-"+view);
@@ -1104,7 +1120,7 @@ function setupJobs(){
     if(miss.length) return $("#jobErr").textContent = "Add "+miss.join(", ")+".";
     if(!validPhone(job.phone)) return $("#jobErr").textContent = "Enter a 7-digit Maldivian phone number.";
     try {
-      if(jobMode.type==="board"){ const n = await Store.add("jobs", job); state.jobs.push(n); $("#jobForm").reset(); $("#jobDlg").close(); toast("Request posted"); renderJobs(); return; }
+      if(jobMode.type==="board"){ const n = await Store.add("jobs", job); state.jobs.push(n); $("#jobForm").reset(); $("#jobDlg").close(); renderJobs(); showJobPosted(n); return; }
       const prov = jobMode.type==="direct" ? state.providers.find(x=>x.id===jobMode.providerId) : myListing();
       const rec = await Store.add("cases", {providerId:prov.id, ownerUid:prov.ownerUid, source:jobMode.type, jobId:null, title:job.title, category:job.category, boatType:job.boatType,
         engine:job.engine, description:job.description, atoll:job.atoll, island:job.island, urgency:job.urgency, customer:{name:job.name, phone:job.phone}, closed:false, docIds:[], createdAt:Date.now()});
@@ -1133,7 +1149,7 @@ function renderJobs(){
       <div class="job-side">
         <span class="badge ${uc}">${ul}</span>
         <small style="color:var(--muted)">Posted by ${esc(j.name)}</small>
-        <div class="row-actions">${canQuote()?`<button class="btn small signal" data-act="sendQuote" data-id="${esc(j.id)}">Send a quote</button>`:""}<a class="btn small" href="${tel(j.phone)}">Call</a><a class="btn small ghost" target="_blank" rel="noopener" href="${wa(j.phone,"Hi, I saw your request on "+BRAND+": "+j.title)}">WhatsApp</a></div>
+        <div class="row-actions">${canQuote()?`<button class="btn small signal" data-act="takeJob" data-id="${esc(j.id)}">Take this job</button>`:""}<a class="btn small" href="${tel(j.phone)}">Call</a><a class="btn small ghost" target="_blank" rel="noopener" href="${wa(j.phone,"Hi, I saw your request on "+BRAND+": "+j.title)}">WhatsApp</a></div>
       </div></article>`;
   }).join("");
 }
@@ -1371,6 +1387,7 @@ function caseStatus(c, docs){
   if(q.some(d=>d.status==="accepted")) return ["Accepted","ok"];
   if(q.some(d=>d.status==="sent")) return ["Quoted",""];
   if(q.some(d=>d.status==="declined")) return ["Declined","alarm"];
+  if(c.stage && c.stage!=="new") return [STAGE[c.stage]||"In progress", c.stage==="completed"?"ok":""];
   return ["New","warn"];
 }
 const sendMsg = (d,p) => `Hello ${d.customer?.name||""}, here is ${d.kind==="quote"?"quotation":"invoice"} ${d.number} from ${p.name} for ${money(totals(d).total,d.currency)}. ${d.kind==="quote"?"View and accept it here":"View it and send your payment slip here"}: ${caseLink(d.caseId)}`;
@@ -1415,7 +1432,7 @@ function wsRequests(p){
     (list.length ? list.map(c => `<div class="item"><div>
         <h3><button class="linklike" data-act="openCase" data-id="${esc(c.id)}">${esc(c.title)}</button></h3>
         <p class="meta"><span>${esc(c.customer?.name)}</span>${c.boatType?`<span>${esc(c.boatType)}</span>`:""}${c.island?`<span>${esc(c.island)}</span>`:""}<span>${SRC[c.source]||""}</span><span>${ago(c.createdAt)}</span></p></div>
-        <div class="acts">${c.urgency==="emergency"&&!c.closed?'<span class="badge alarm">Emergency</span>':""}${badge(caseStatus(c,docs))}<button class="btn small ghost" data-act="openCase" data-id="${esc(c.id)}">Open</button></div></div>`).join("")
+        <div class="acts">${c.stage && c.stage!=="new" && !c.closed && caseStatus(c,docs)[0]!==STAGE[c.stage] ? `<span class="badge">${esc(STAGE[c.stage]||"")}</span>` : ""}${c.urgency==="emergency"&&!c.closed?'<span class="badge alarm">Emergency</span>':""}${badge(caseStatus(c,docs))}<button class="btn small ghost" data-act="openCase" data-id="${esc(c.id)}">Open</button></div></div>`).join("")
     : `<div class="empty"><h3>No requests yet</h3><p>Requests customers send from your listing land here. You can also quote on jobs from the request board.</p><button class="btn" data-go="requests">Open the request board</button></div>`);
 }
 function wsDocs(kind){
@@ -1517,6 +1534,12 @@ function openCase(id){
       <p class="hint" style="margin-bottom:8px">The customer uses this link to view your quotations, accept them and send payment slips.</p>
       <div class="contact"><button class="btn ghost small" data-act="copyLink" data-id="${esc(c.id)}">Copy link</button>
         <a class="btn ghost small" target="_blank" rel="noopener" href="${wa(c.customer?.phone, `Hi ${name}, you can follow your request with ${p.name} here: ${caseLink(c.id)}`)}">Send link on WhatsApp</a></div>
+      <h3>Progress</h3>
+      ${progressBlock(c)}
+      ${c.closed ? "" : `<div class="grid2" style="margin-top:14px">
+        <div class="field"><label class="f" for="pgStage">Stage</label><select class="input" id="pgStage">${STAGES.map(([k,l])=>`<option value="${k}"${k===(c.stage||"new")?" selected":""}>${l}</option>`).join("")}</select></div>
+        <div class="field"><label class="f" for="pgNote">Message for the customer <small>(optional)</small></label><input class="input" id="pgNote" placeholder="e.g. Parts arrive Thursday"></div>
+      </div><p class="err" id="pgErr" role="alert"></p><button class="btn small" data-act="saveProgress" data-id="${esc(c.id)}">Update progress</button>`}
       <h3>Quotations and invoices</h3>
       ${docs.length ? docs.map(d=>`<div class="item"><div><h3 style="font-size:19px">${d.kind==="quote"?"Quotation":"Invoice"} ${esc(d.number)}</h3><p class="meta"><span>${fmtDate(d.issueDate)}</span></p></div>
         <div class="acts"><span class="amt">${money(totals(d).total,d.currency)}</span>${badge(docStatus(d))}<button class="btn small ghost" data-act="viewDoc" data-id="${esc(d.id)}">View</button></div></div>`).join("")
@@ -1525,6 +1548,7 @@ function openCase(id){
         <button class="btn" data-act="newDoc" data-kind="quote" data-case="${esc(c.id)}">Create quotation</button>
         <button class="btn ghost" data-act="newDoc" data-kind="invoice" data-case="${esc(c.id)}">Create invoice</button>
         <button class="btn ghost" data-act="${c.closed?"reopenCase":"closeCase"}" data-id="${esc(c.id)}">${c.closed?"Reopen job":"Close job"}</button>
+        ${c.jobId && !c.closed && !docs.some(d=>d.status!=="draft") ? `<button class="btn ghost" data-act="releaseJob" data-id="${esc(c.id)}">Give back to the board</button>` : ""}
       </div>
     </div>`;
   if(!D.open) D.showModal();
@@ -1768,8 +1792,8 @@ async function renderCustomerCase(id){
   $("#cTitle").textContent = c.title;
   $("#cLede").textContent = `Your request with ${p?.name||"the business"}${c.closed?" (closed)":""}.`;
   $("#cContact").innerHTML = p ? `<a class="btn signal" href="${tel(p.phone)}">Call ${esc(p.name)}</a><a class="btn on-dark" target="_blank" rel="noopener" href="${wa(p.whatsapp||p.phone, `Hi, about my request: ${c.title}`)}">WhatsApp</a>` : "";
-  body.innerHTML = docs.length ? docs.slice().reverse().map(d=>custDocHTML(d,p)).join("")
-    : `<div class="empty"><h3>No quotation yet</h3><p>${esc(p?.name||"The business")} will send a quotation to this page. Keep the link, or message them on WhatsApp.</p></div>`;
+  body.innerHTML = `<div class="panel cdoc"><h2 style="font-size:26px;margin-bottom:12px">Progress</h2>${progressBlock(c)}</div>` + (docs.length ? docs.slice().reverse().map(d=>custDocHTML(d,p)).join("")
+    : `<div class="empty"><h3>No quotation yet</h3><p>${esc(p?.name||"The business")} will send a quotation to this page. Keep the link, or message them on WhatsApp.</p></div>`);
 }
 function custDocHTML(d, p){
   const t = totals(d), inv = d.kind==="invoice", s = settingsOf(p);
@@ -1858,6 +1882,10 @@ document.addEventListener("click", async e => {
     recordPay: () => openRecordPay(id),
     slip: () => openSlip(id),
     sendQuote: () => quoteFromJob(id),
+    takeJob: () => takeJob(id),
+    releaseJob: () => releaseJob(id),
+    saveProgress: () => saveProgress(id),
+    track: () => openTrack(),
     reqQuote: () => { $("#provDlg").close(); openJobDlg({type:"direct", providerId:id}); },
     sendDoc: async () => {           // the link itself opens WhatsApp; mark as sent
       const d = wsDoc(id); if(!d || d.status!=="draft") return;
@@ -1892,6 +1920,97 @@ document.addEventListener("click", async e => {
 });
 $("#wsTabs").addEventListener("click", e => { const b = e.target.closest("[data-ws]"); if(!b) return; state.ws.tab = b.dataset.ws; renderWs(); });
 
+/* ============ TAKE A JOB FROM THE BOARD + JOB PROGRESS ============ */
+const STAGES = [["new","New"],["accepted","Job accepted"],["inspecting","Inspecting"],["waiting_parts","Waiting for parts"],["in_progress","Work in progress"],["completed","Completed"]];
+const STAGE = Object.fromEntries(STAGES);
+const stageIdx = k => Math.max(0, STAGES.findIndex(s=>s[0]===(k||"new")));
+const jobLink = id => location.href.split("#")[0] + "#j=" + encodeURIComponent(id);
+
+async function takeJob(jobId){
+  const p = myListing();
+  if(!canQuote()) return toast("Your listing needs to be approved before you can take jobs.");
+  let j = state.jobs.find(x=>x.id===jobId);
+  try { j = await Store.get("jobs", jobId) || j; } catch {}
+  if(!j || j.status!=="open"){ await refresh(); renderJobs(); return toast("Another business has already taken this job."); }
+  if(!confirm(`Take “${j.title}”?\n\nIt leaves the request board, and ${j.name} will see that ${p.name} is handling it.`)) return;
+  const caseId = Store.newId("cases"), now = Date.now();
+  try {
+    await Store.claim("jobs", jobId, {status:"taken", takenBy:p.id, takenByName:p.name, takenByUid:Auth.user.uid, takenAt:now, caseId}, d => d.status==="open");
+  } catch(e){ await refresh(); renderJobs(); return toast(e.message); }
+  await Store.set("cases", caseId, {providerId:p.id, ownerUid:Auth.user.uid, source:"board", jobId, title:j.title, category:j.category, boatType:j.boatType, engine:j.engine,
+    description:j.description, atoll:j.atoll, island:j.island, urgency:j.urgency, customer:{name:j.name, phone:j.phone}, closed:false, docIds:[],
+    stage:"accepted", updates:[{at:now, stage:"accepted", text:`${p.name} took your request.`}], createdAt:now});
+  await refresh(); await loadWs();
+  state.ws.tab = "requests"; show("register"); openCase(caseId);
+  toast("Job taken. Let the customer know using the buttons below.");
+}
+async function releaseJob(caseId){
+  const c = wsCase(caseId); if(!c || !c.jobId) return;
+  if(!confirm("Give this job back to the request board? Other businesses will be able to take it.")) return;
+  await Store.update("jobs", c.jobId, {status:"open", takenBy:null, takenByName:null, takenByUid:null, takenAt:null, caseId:null});
+  const updates = [...(c.updates||[]), {at:Date.now(), stage:c.stage||"new", text:"Released back to the request board."}];
+  await Store.update("cases", c.id, {closed:true, updates}); Object.assign(c, {closed:true, updates});
+  await refresh(); renderWs(); $("#caseDlg").close(); toast("Job returned to the request board");
+}
+function progressBlock(c){
+  const cur = stageIdx(c.stage), ups = (c.updates||[]).slice().reverse();
+  return `<ol class="stages">${STAGES.map(([k,l],i)=>`<li class="${i<cur?"done":i===cur?"on":""}">${l}</li>`).join("")}</ol>
+    ${ups.length ? `<div class="updates">${ups.map(u=>`<div class="upd"><b>${esc(STAGE[u.stage]||"Update")}</b> <span class="hint">${ago(u.at)}</span>${u.text?`<p>${esc(u.text)}</p>`:""}</div>`).join("")}</div>` : ""}`;
+}
+async function saveProgress(caseId){
+  const c = wsCase(caseId), stage = $("#pgStage").value, text = $("#pgNote").value.trim();
+  if(stage===(c.stage||"new") && !text) return $("#pgErr").textContent = "Change the stage or write a message for the customer.";
+  const updates = [...(c.updates||[]), {at:Date.now(), stage, text}];
+  await Store.update("cases", c.id, {stage, updates}); Object.assign(c, {stage, updates});
+  toast("Progress updated"); renderWs(); openCase(c.id);
+}
+
+/* ----- customer: posted job page and tracking by phone ----- */
+function showJobPosted(j){
+  const link = jobLink(j.id), D = $("#linkDlg");
+  D.innerHTML = `<div class="dlg-head"><div><h2>Request posted</h2><p class="meta"><span>${esc(j.title)}</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      <p>Businesses can now see your request. When one takes it, you’ll see who is handling it, their progress, quotations and invoices on your request page.</p>
+      <div class="linkbox"><input class="input" readonly value="${esc(link)}" aria-label="Your request link"><button class="btn ghost" data-act="copyRaw" data-v="${esc(link)}">Copy</button></div>
+      <p class="hint">Lost the link? Use “Track my request” on the request board with your phone number.${Auth.cloud ? "" : " Demo mode: the link only works in this browser."}</p>
+      <div class="contact" style="margin-top:14px"><a class="btn" href="#j=${encodeURIComponent(j.id)}">Open my request page</a></div>
+    </div>`;
+  D.showModal();
+}
+function openTrack(){
+  const D = $("#linkDlg");
+  D.innerHTML = `<div class="dlg-head"><div><h2>Track my request</h2><p class="meta"><span>Find requests you posted on the board</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <form class="dlg-body" id="trackForm" novalidate>
+      <div class="field"><label class="f" for="trPhone">The phone number you used</label><input class="input" id="trPhone" inputmode="tel" placeholder="7-digit number"></div>
+      <p class="err" id="trErr" role="alert"></p>
+      <button class="btn">Find my requests</button>
+      <div id="trList" style="margin-top:16px"></div>
+    </form>`;
+  D.showModal();
+  $("#trackForm").onsubmit = async e => {
+    e.preventDefault(); const ph = digits($("#trPhone").value);
+    if(!validPhone(ph)) return $("#trErr").textContent = "Enter a 7-digit Maldivian phone number.";
+    $("#trErr").textContent = ""; await refresh();
+    const mine = state.jobs.filter(j=>digits(j.phone)===ph).sort((a,b)=>b.createdAt-a.createdAt);
+    $("#trList").innerHTML = mine.length ? mine.map(j=>`<div class="item"><div><h3 style="font-size:19px">${esc(j.title)}</h3><p class="meta"><span>${ago(j.createdAt)}</span><span>${j.status==="taken"?"Taken by "+esc(j.takenByName):j.status==="open"?"Waiting for a business":"Closed"}</span></p></div>
+      <div class="acts"><a class="btn small" href="#j=${encodeURIComponent(j.id)}">Open</a></div></div>`).join("")
+      : `<p style="color:var(--muted)">No requests found for that number.</p>`;
+  };
+}
+async function renderCustomerJob(id){
+  $$(".view").forEach(v => v.hidden = v.id!=="view-case");
+  $$(".nav button").forEach(b => b.removeAttribute("aria-current"));
+  window.scrollTo(0,0);
+  let j = null; try { j = await Store.get("jobs", id); } catch {}
+  if(j && j.status==="taken" && j.caseId) return renderCustomerCase(j.caseId);
+  $("#cContact").innerHTML = "";
+  if(!j){ $("#cTitle").textContent = "Request not found"; $("#cLede").textContent = "Check the link, or use Track my request on the request board."; $("#cBody").innerHTML = ""; return; }
+  $("#cTitle").textContent = j.title;
+  $("#cLede").textContent = j.status==="open" ? "Waiting for a business to take your request." : "This request is closed.";
+  $("#cBody").innerHTML = `<div class="panel cdoc"><h2 style="font-size:26px;margin-bottom:12px">Your request</h2>
+    <dl class="kv">${kvRow("Service",CAT[j.category])}${kvRow("Boat",j.boatType)}${kvRow("Engine or equipment",j.engine)}${kvRow("Location",[j.island,j.atoll].filter(Boolean).join(", "))}${kvRow("Details",j.description)}${kvRow("Posted",ago(j.createdAt))}</dl>
+    ${j.status==="open" ? `<p class="hint" style="margin-top:14px">When a business takes it, this page shows who is handling it, their progress, and any quotation or invoice. Businesses may also call you on ${esc(fmtPhone(j.phone))}.</p>` : ""}</div>`;
+}
 /* ============ ADMIN ============ */
 function setupAdmin(){
   $("#gate").addEventListener("submit", async e => {
@@ -1954,7 +2073,7 @@ function renderAdmin(){
   }
   if(t==="jobs"){
     const js = state.jobs.slice().sort((a,b)=>b.createdAt-a.createdAt);
-    L.innerHTML = js.length ? js.map(j=>`<div class="adm-item"><header><div><h3>${esc(j.title)}</h3><p class="meta"><span>${j.status==="open"?"Open":"Closed"}</span><span>${esc(j.island)}, ${esc(j.atoll)}</span><span>${esc(j.name)} ${esc(fmtPhone(j.phone))}</span><span>${ago(j.createdAt)}</span></p></div>
+    L.innerHTML = js.length ? js.map(j=>`<div class="adm-item"><header><div><h3>${esc(j.title)}</h3><p class="meta"><span>${j.status==="open"?"Open":j.status==="taken"?"Taken by "+esc(j.takenByName||""):"Closed"}</span><span>${esc(j.island)}, ${esc(j.atoll)}</span><span>${esc(j.name)} ${esc(fmtPhone(j.phone))}</span><span>${ago(j.createdAt)}</span></p></div>
       <div class="btns">${j.status==="open"?`<button class="btn small ghost" data-act="closejob" data-id="${esc(j.id)}">Close</button>`:`<button class="btn small ghost" data-act="reopenjob" data-id="${esc(j.id)}">Reopen</button>`}<button class="btn small ghost" data-act="deljob" data-id="${esc(j.id)}">Delete</button></div></header></div>`).join("")
       : `<div class="empty"><h3>No requests yet</h3><p>Requests posted on the request board appear here.</p></div>`;
   }
