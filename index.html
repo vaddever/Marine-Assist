@@ -249,6 +249,9 @@ footer{background:var(--hull);color:var(--hull-muted);font-size:14.5px}
 footer .wrap{padding-top:28px;padding-bottom:32px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 footer b{color:var(--hull-ink)}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:8px;font-weight:500;z-index:100;max-width:calc(100vw - 32px)}
+.toast{display:flex;gap:12px;align-items:center}
+.toast-btn{background:var(--signal);color:var(--signal-ink);border:0;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.navcount{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--signal);color:var(--signal-ink);font-size:11.5px;font-weight:700;margin-left:6px;vertical-align:1px}
 .mode-note{background:var(--signal);color:var(--signal-ink);font-size:14px;text-align:center;padding:6px 12px}
 
 /* ============ WORKSPACE & BILLING ============ */
@@ -387,7 +390,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
   <div class="hero">
     <svg class="depth" id="depth" aria-hidden="true" preserveAspectRatio="xMidYMid slice"></svg>
     <div class="wrap">
-      <h1>Find a marine engineer or parts shop on any atoll.</h1>
+      <h1>Your Marine Helper</h1>
       <p class="lede">Engine trouble, a cracked hull, a radio that won’t transmit. Search marine service providers across the Maldives, or post a request and let them call you.</p>
       <form class="searchbar" id="heroSearch" role="search">
         <label class="sr" for="q">What do you need?</label>
@@ -783,6 +786,12 @@ const avg = p => { const r = p.reviews||[]; return r.length ? r.reduce((a,b)=>a+
 const coverageText = p => (p.coverage||[]).includes("ALL") ? "Whole country" : [p.atoll, ...(p.coverage||[]).filter(a=>a!==p.atoll)].join(", ");
 function ago(t){ const s=(Date.now()-t)/1000; if(s<3600) return Math.max(1,Math.round(s/60))+" min ago"; if(s<86400) return Math.round(s/3600)+" h ago"; const d=Math.round(s/86400); return d+(d===1?" day ago":" days ago"); }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,3200); }
+function alertMe(msg, label, fn){
+  const t=$("#toast"); t.innerHTML = `<span>${esc(msg)}</span>${label?` <button type="button" class="toast-btn">${esc(label)}</button>`:""}`; t.hidden=false;
+  const b=$(".toast-btn",t); if(b) b.onclick = () => { t.hidden=true; fn&&fn(); };
+  clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,10000);
+  try { if(document.hidden && "Notification" in window && Notification.permission==="granted") new Notification(BRAND, {body:msg}); } catch {}
+}
 function opts(list, first){ return (first!=null?`<option value="">${esc(first)}</option>`:"") + list.map(x=>Array.isArray(x)?`<option value="${esc(x[0])}">${esc(x[1])}</option>`:`<option>${esc(x)}</option>`).join(""); }
 function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("Could not load "+src)); document.head.appendChild(s); }); }
 
@@ -815,7 +824,14 @@ const Store = (() => {
     if(db){ const ref=db.collection(c).doc(id); await db.runTransaction(async tx => { const snap=await tx.get(ref); if(!snap.exists || !ok(snap.data())) throw new Error(msg); tx.update(ref, patch); }); return; }
     const a=read(c)||[], i=a.findIndex(x=>x.id===id); if(i<0 || !ok(a[i])) throw new Error(msg); a[i]={...a[i],...patch}; write(c,a);
   }
-  return {init,list,add,update,remove,get,query,newId,set,claim};
+  function watch(c,f,v,cb,onErr){
+    if(db) return db.collection(c).where(f,"==",v).onSnapshot(q => cb(q.docs.map(d=>({id:d.id,...d.data()}))), e => onErr && onErr(e));
+    const run = () => cb((read(c)||[]).filter(x=>x[f]===v));
+    const onStore = e => { if(e.key===PFX+c) run(); };
+    window.addEventListener("storage", onStore); const t = setInterval(run, 5000); run();
+    return () => { window.removeEventListener("storage", onStore); clearInterval(t); };
+  }
+  return {init,list,add,update,remove,get,query,newId,set,claim,watch};
 })();
 
 /* ============ ACCOUNTS (Firebase Auth or local demo) ============ */
@@ -866,12 +882,13 @@ const Auth = (() => {
 const isAdminUser = () => Auth.cloud && Auth.user && CONFIG.adminEmails.map(e=>e.toLowerCase()).includes((Auth.user.email||"").toLowerCase());
 const myListing = () => Auth.user ? state.providers.find(p => p.ownerUid === Auth.user.uid) : null;
 function onAuthChange(){
+  if(!Auth.user) stopLive();
   updateAcctBtn();
   if(!$("#view-register").hidden) renderBiz();
   if(!$("#view-admin").hidden) renderAdmin();
 }
 async function doSignOut(){
-  await Auth.signOut(); editingId = null; state.ws = {cases:[],docs:[],tab:"requests",loaded:false};
+  stopLive(); await Auth.signOut(); editingId = null; state.ws = {cases:[],docs:[],tab:"requests",loaded:false};
   state.admin = false; authMode = "signin"; updateAcctBtn(); toast("Signed out");
   if(!$("#view-admin").hidden) renderAdmin(); else show("register");
 }
@@ -892,7 +909,7 @@ function updateAcctBtn(){
   $("#acctEmail").textContent = u ? "Signed in as "+u.email : "";
   $("#menuWs").textContent = u && myListing() ? "Workspace" : "Register your business";
   $("#menuAdmin").hidden = !isAdminUser();
-  $("#navBiz").textContent = u && myListing() ? "Workspace" : "List your business";
+  wsCounts();
 }
 
 /* ============ STATE ============ */
@@ -1169,7 +1186,7 @@ function renderBiz(){
   }
   if(mine && !editingId){
     $("#bizTitle").textContent = "Workspace"; $("#bizLede").textContent = "Handle requests, send quotations and invoices, and check payment slips.";
-    renderWs(); loadWs().then(renderWs).catch(e=>toast("Couldn’t load your workspace: "+e.message)); return;
+    renderWs(); if(liveOff.length) return; loadWs().then(()=>{ renderWs(); startLive(); }).catch(e=>toast("Couldn’t load your workspace: "+e.message)); return;
   }
   if(editingId){ $("#bizTitle").textContent = "Edit listing"; $("#bizLede").textContent = "Changes show on the public directory as soon as you save."; }
   else { $("#bizTitle").textContent = "Register your business"; $("#bizLede").textContent = "Every listing is checked by an admin before it goes live."; }
@@ -1404,16 +1421,24 @@ async function loadWs(){
 const wsCase = id => state.ws.cases.find(c=>c.id===id);
 const wsDoc = id => state.ws.docs.find(d=>d.id===id);
 
-function renderWs(){
-  const p = myListing(); if(!p || $("#wsBox").hidden) return;
+const BASE_TITLE = document.title;
+function wsCounts(){
   const {tab, cases, docs} = state.ws;
   const newN = cases.filter(c=>caseStatus(c,docs)[0]==="New").length;
   const slipN = docs.reduce((a,d)=>a+(d.payments||[]).filter(x=>x.status==="pending").length,0);
+  const accN = docs.filter(d=>d.kind==="quote" && d.status==="accepted" && !d.invoiceId).length;
   $$("#wsTabs button").forEach(b => {
-    const k = b.dataset.ws, n = k==="requests" ? newN : k==="payments" ? slipN : 0;
+    const k = b.dataset.ws, n = k==="requests" ? newN : k==="payments" ? slipN : k==="quotes" ? accN : 0;
     b.setAttribute("aria-selected", k===tab);
     b.innerHTML = esc(WS_LABEL[k]) + (n ? `<span class="count">${n}</span>` : "");
   });
+  const total = myListing() ? newN + slipN + accN : 0;
+  $("#navBiz").innerHTML = esc(Auth.user && myListing() ? "Workspace" : "List your business") + (total ? `<span class="navcount">${total}</span>` : "");
+  document.title = (total ? `(${total}) ` : "") + BASE_TITLE;
+}
+function renderWs(){
+  const p = myListing(); wsCounts(); if(!p || $("#wsBox").hidden) return;
+  const {tab} = state.ws;
   $("#dashBox").hidden = tab!=="listing"; $("#wsPanel").hidden = tab==="listing";
   if(tab==="listing") return renderDash(p);
   const P = $("#wsPanel");
@@ -1428,7 +1453,7 @@ function wsRequests(p){
   const note = p.status!=="approved" ? `<div class="status pending"><b>Not live yet</b><span>Customers can send you requests once your listing is approved. You can still add jobs yourself and set up billing.</span></div>` : "";
   const list = cases.slice().sort((a,b)=>(caseStatus(b,docs)[0]==="New")-(caseStatus(a,docs)[0]==="New") || (a.closed-b.closed) || b.createdAt-a.createdAt);
   const SRC = {direct:"Sent to you", board:"From request board", manual:"Added by you"};
-  return note + `<div class="ws-bar"><h2>Requests</h2><div class="row-actions"><button class="btn ghost small" data-go="requests">Find jobs on the board</button><button class="btn small" data-act="manualJob">Add a job</button></div></div>` +
+  return note + `<div class="ws-bar"><h2>Requests</h2><div class="row-actions">${"Notification" in window && Notification.permission==="default" ? `<button class="btn ghost small" data-act="alerts">Turn on alerts</button>` : ""}<button class="btn ghost small" data-go="requests">Find jobs on the board</button><button class="btn small" data-act="manualJob">Add a job</button></div></div>` +
     (list.length ? list.map(c => `<div class="item"><div>
         <h3><button class="linklike" data-act="openCase" data-id="${esc(c.id)}">${esc(c.title)}</button></h3>
         <p class="meta"><span>${esc(c.customer?.name)}</span>${c.boatType?`<span>${esc(c.boatType)}</span>`:""}${c.island?`<span>${esc(c.island)}</span>`:""}<span>${SRC[c.source]||""}</span><span>${ago(c.createdAt)}</span></p></div>
@@ -1459,7 +1484,7 @@ function wsPayments(){
       <h3>${money(x.amount,d.currency)} <span style="font-weight:500;color:var(--muted)">for ${esc(d.number)}</span></h3>
       <p class="meta"><span>${esc(x.payer||d.customer?.name)}</span><span>${METHOD[x.method]||"Bank transfer"}${x.by==="business"?", recorded by you":""}</span>${x.reference?`<span>Ref ${esc(x.reference)}</span>`:""}<span>${ago(x.at)}</span></p>
       ${x.status==="rejected"&&x.reason?`<p class="hint">Reason: ${esc(x.reason)}</p>`:""}</div>
-      <div class="acts">${badge(PAY_ST[x.status]||PAY_ST.pending)}${x.slipId?`<button class="btn small ghost" data-act="slip" data-id="${esc(x.slipId)}">View slip</button>`:""}
+      <div class="acts">${badge(PAY_ST[x.status]||PAY_ST.pending)}${x.slipId?`<button class="btn small ghost" data-act="slip" data-id="${esc(x.slipId)}" data-doc="${esc(d.id)}" data-pay="${esc(x.id)}">View slip</button>`:""}
       ${x.status==="pending"?`<button class="btn small" data-act="payOk" data-doc="${esc(d.id)}" data-id="${esc(x.id)}">Confirm received</button><button class="btn small ghost" data-act="payNo" data-doc="${esc(d.id)}" data-id="${esc(x.id)}">Reject</button>`:""}</div></div>`).join("");
 }
 function bankRow(b={}){
@@ -1517,7 +1542,7 @@ function bindSettings(p){
 
 /* ----- case (request) detail ----- */
 function openCase(id){
-  const c = wsCase(id); if(!c) return;
+  const c = wsCase(id); if(!c) return; openCaseId = id;
   const p = myListing(), docs = state.ws.docs.filter(d=>d.caseId===id).sort((a,b)=>a.createdAt-b.createdAt);
   const D = $("#caseDlg"), name = c.customer?.name||"";
   D.innerHTML = `<div class="dlg-head"><div><h2>${esc(c.title)}</h2>
@@ -1689,7 +1714,7 @@ function sheetHTML(d, p, c){
   </div>`;
 }
 function openDocView(id, o={}){
-  const d = o.doc || wsDoc(id); if(!d) return;
+  const d = o.doc || wsDoc(id); if(!d) return; openViewId = o.customer ? null : id;
   const p = o.provider || myListing(), c = o.case || wsCase(d.caseId), t = totals(d), V = $("#viewDlg");
   const owner = !o.customer, inv = d.kind==="invoice", paid = paidOf(d);
   const acts = owner ? [
@@ -1703,7 +1728,7 @@ function openDocView(id, o={}){
     d.status==="draft" ? `<button class="btn small ghost" data-act="delDoc" data-id="${esc(d.id)}">Delete draft</button>` : ""
   ].join("") : `<button class="btn small" data-act="printDoc">Print or save PDF</button>`;
   V.innerHTML = `<div class="dlg-head"><div><h2>${inv?"Invoice":"Quotation"} ${esc(d.number)}</h2><div class="badges" style="justify-content:flex-start;margin-top:8px">${badge(docStatus(d))}</div></div><button class="x" data-close aria-label="Close">✕</button></div>
-    <div class="dlg-body">${owner && d.status==="draft" ? `<p class="hint" style="margin-bottom:10px">Draft. The customer sees it once you send it.</p>` : ""}<div class="contact" style="margin-bottom:16px">${acts}</div><div id="sheetWrap">${sheetHTML(d,p,c)}</div></div>`;
+    <div class="dlg-body">${owner && d.status==="draft" ? `<p class="hint" style="margin-bottom:10px">Draft. The customer sees it once you send it.</p>` : ""}<div class="contact" style="margin-bottom:16px">${acts}</div>${owner && inv ? invPaymentsBlock(d) : ""}<div id="sheetWrap">${sheetHTML(d,p,c)}</div></div>`;
   if(!V.open) V.showModal();
   V.scrollTop = 0;
 }
@@ -1725,9 +1750,19 @@ function openRecordPay(id){
     catch(x){ $("#rpErr").textContent = "Couldn’t save: "+x.message; }
   };
 }
-async function openSlip(id){
-  let sl = null; try { sl = await Store.get("slips", id); } catch {}
+function invPaymentsBlock(d){
+  const pays = (d.payments||[]).slice().sort((a,b)=>(b.status==="pending")-(a.status==="pending") || b.at-a.at);
+  if(!pays.length) return "";
+  return `<div class="panel" style="margin-bottom:16px;padding:16px"><h3 style="margin:0 0 8px">Payments</h3>${pays.map(x=>`<div class="payline" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:8px">
+    <span><b>${money(x.amount,d.currency)}</b> <span class="hint">${esc(x.payer||"")}${x.reference?", ref "+esc(x.reference):""}, ${ago(x.at)}</span></span>
+    <span class="row-actions">${badge(PAY_ST[x.status]||PAY_ST.pending)}${x.slipId?`<button class="btn small ghost" data-act="slip" data-id="${esc(x.slipId)}" data-doc="${esc(d.id)}" data-pay="${esc(x.id)}">View slip</button>`:""}
+    ${x.status==="pending"?`<button class="btn small" data-act="payOk" data-doc="${esc(d.id)}" data-id="${esc(x.id)}">Confirm received</button><button class="btn small ghost" data-act="payNo" data-doc="${esc(d.id)}" data-id="${esc(x.id)}">Reject</button>`:""}</span></div>`).join("")}</div>`;
+}
+async function openSlip(id, docId, payId){
+  let sl = null;
+  try { sl = await Store.get("slips", id); } catch(e){ return toast("Couldn’t open the slip: "+e.message); }
   if(!sl) return toast("That slip couldn’t be found.");
+  const doc = docId ? wsDoc(docId) : null, pay = doc ? (doc.payments||[]).find(x=>x.id===payId) : null;
   const D = $("#slipDlg"), isImg = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/.test(sl.data||"");
   let link = "";
   if(sl.type==="application/pdf" || /^data:image\/(png|jpe?g);/.test(sl.data||"")){
@@ -1738,8 +1773,10 @@ async function openSlip(id){
     <div class="dlg-body">${isImg ? `<img src="${esc(sl.data)}" alt="Transfer slip" style="max-width:100%;border:1px solid var(--line);border-radius:6px">`
       : link ? `<iframe src="${link}" title="Transfer slip" style="width:100%;height:70vh;border:1px solid var(--line);border-radius:6px"></iframe>` : `<p>This slip can’t be shown.</p>`}
       ${link ? `<p style="margin-top:10px"><a href="${link}" target="_blank" rel="noopener">Open full size</a></p>` : ""}
-      <p class="hint" style="margin-top:10px">Check the amount and reference against your bank account before confirming.</p></div>`;
-  D.showModal();
+      ${pay ? `<p style="margin-top:12px"><b>${money(pay.amount,doc.currency)}</b> for ${esc(doc.number)}${pay.reference?`, reference ${esc(pay.reference)}`:""}${pay.payer?`, paid by ${esc(pay.payer)}`:""}</p>` : ""}
+      <p class="hint" style="margin-top:6px">Check the amount and reference against your bank account before confirming.</p>
+      ${pay && pay.status==="pending" ? `<div class="contact" style="margin-top:14px"><button class="btn" data-act="payOk" data-doc="${esc(doc.id)}" data-id="${esc(pay.id)}">Confirm received</button><button class="btn ghost" data-act="payNo" data-doc="${esc(doc.id)}" data-id="${esc(pay.id)}">Reject</button></div>` : pay ? `<p style="margin-top:10px">${badge(PAY_ST[pay.status])}</p>` : ""}</div>`;
+  if(!D.open) D.showModal();
 }
 
 /* ----- after a customer sends a direct request ----- */
@@ -1865,6 +1902,52 @@ $("#cBody").addEventListener("submit", async e => {
   } catch(x){ err.textContent = x.message; btn.disabled = false; btn.textContent = "Send payment slip"; }
 });
 
+/* ============ LIVE UPDATES FOR BUSINESSES ============ */
+let liveOff = [], liveSig = {}, openCaseId = null, openViewId = null;
+function stopLive(){ liveOff.forEach(f=>{ try{ f(); }catch{} }); liveOff = []; liveSig = {}; }
+function startLive(){
+  if(liveOff.length || !Auth.user || !myListing()) return;
+  const uid = Auth.user.uid, seen = {cases:false, docs:false};
+  const onErr = e => toast("Live updates stopped: "+e.message);
+  const handle = (col, list) => {
+    const sig = JSON.stringify(list); if(sig===liveSig[col]) return; liveSig[col] = sig;
+    const prev = state.ws[col];
+    if(seen[col]) (col==="docs" ? notifyDocs : notifyCases)(prev, list);
+    seen[col] = true; state.ws[col] = list; state.ws.loaded = true; liveRefresh();
+  };
+  liveOff.push(Store.watch("cases","ownerUid",uid, l => handle("cases",l), onErr));
+  liveOff.push(Store.watch("docs","ownerUid",uid, l => handle("docs",l), onErr));
+}
+function liveRefresh(){
+  wsCounts();
+  if(!$("#wsBox").hidden && !["settings","listing"].includes(state.ws.tab)) renderWs();
+  if($("#viewDlg").open && openViewId && wsDoc(openViewId)) openDocView(openViewId);
+  const busy = document.activeElement && $("#caseDlg").contains(document.activeElement) && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if($("#caseDlg").open && openCaseId && wsCase(openCaseId) && !busy) openCase(openCaseId);
+}
+function afterPay(d){
+  $("#slipDlg").open && $("#slipDlg").close();
+  renderWs(); if($("#viewDlg").open && openViewId===d.id) openDocView(d.id);
+  if($("#caseDlg").open && openCaseId===d.caseId) openCase(d.caseId);
+}
+function goWs(tab, after){ state.ws.tab = tab; show("register"); if(after) after(); }
+function notifyDocs(prev, list){
+  const old = Object.fromEntries(prev.map(d=>[d.id,d]));
+  list.forEach(d => {
+    const o = old[d.id]; if(!o) return;
+    if(d.kind==="quote" && o.status!==d.status && ["accepted","declined"].includes(d.status))
+      alertMe(`${d.customer?.name||"The customer"} ${d.status} quotation ${d.number}.`, d.status==="accepted" ? "Create invoice" : "View",
+        () => d.status==="accepted" && !d.invoiceId ? openEditor({kind:"invoice", fromQuote:d.id, caseId:d.caseId}) : openDocView(d.id));
+    const before = (o.payments||[]).length, now = d.payments||[];
+    if(now.length > before){ const x = now[now.length-1];
+      if(x.status==="pending") alertMe(`Payment slip received for ${d.number}: ${money(x.amount,d.currency)}.`, "Review", () => goWs("payments", () => x.slipId && openSlip(x.slipId, d.id, x.id))); }
+  });
+}
+function notifyCases(prev, list){
+  const ids = new Set(prev.map(c=>c.id));
+  list.filter(c => !ids.has(c.id) && c.source==="direct").forEach(c => alertMe(`New quote request: ${c.title}`, "Open", () => goWs("requests", () => openCase(c.id))));
+}
+
 /* ============ WORKSPACE ACTIONS (one click handler) ============ */
 document.addEventListener("click", async e => {
   const t = e.target.closest("[data-act]"); if(!t) return;
@@ -1880,12 +1963,13 @@ document.addEventListener("click", async e => {
     copyLink: () => copyText(caseLink(id)),
     copyRaw: () => copyText(t.dataset.v, t.dataset.msg || "Copied"),
     recordPay: () => openRecordPay(id),
-    slip: () => openSlip(id),
+    slip: () => openSlip(id, t.dataset.doc, t.dataset.pay),
     sendQuote: () => quoteFromJob(id),
     takeJob: () => takeJob(id),
     releaseJob: () => releaseJob(id),
     saveProgress: () => saveProgress(id),
     track: () => openTrack(),
+    alerts: async () => { try { const r = await Notification.requestPermission(); toast(r==="granted" ? "Alerts on. You’ll get a notification when this tab is in the background." : "Alerts not turned on."); renderWs(); } catch { toast("This browser doesn’t support alerts."); } },
     reqQuote: () => { $("#provDlg").close(); openJobDlg({type:"direct", providerId:id}); },
     sendDoc: async () => {           // the link itself opens WhatsApp; mark as sent
       const d = wsDoc(id); if(!d || d.status!=="draft") return;
@@ -1904,12 +1988,12 @@ document.addEventListener("click", async e => {
     reopenCase: async () => { await Store.update("cases", id, {closed:false}); wsCase(id).closed = false; renderWs(); openCase(id); },
     payOk: async () => {
       const d = wsDoc(t.dataset.doc), payments = d.payments.map(x => x.id===id ? {...x, status:"confirmed", reviewedAt:Date.now()} : x);
-      await Store.update("docs", d.id, {payments}); d.payments = payments; toast("Payment confirmed"); renderWs();
+      await Store.update("docs", d.id, {payments}); d.payments = payments; toast("Payment confirmed"); afterPay(d);
     },
     payNo: async () => {
       const reason = prompt("Why isn’t this slip accepted? The customer will see this.", "Transfer not received yet"); if(reason===null) return;
       const d = wsDoc(t.dataset.doc), payments = d.payments.map(x => x.id===id ? {...x, status:"rejected", reason, reviewedAt:Date.now()} : x);
-      await Store.update("docs", d.id, {payments}); d.payments = payments; toast("Slip marked as not accepted"); renderWs();
+      await Store.update("docs", d.id, {payments}); d.payments = payments; toast("Slip marked as not accepted"); afterPay(d);
     },
     custView: () => { const d = cust.docs.find(x=>x.id===id); openDocView(id, {doc:d, provider:cust.p, case:cust.c, customer:true}); },
     custAccept: async () => { if(!confirm("Accept this quotation?")) return; await Store.update("docs", id, {status:"accepted", respondedAt:Date.now()}); toast("Quotation accepted"); renderCustomerCase(cust.c.id); },
@@ -2093,7 +2177,7 @@ $("#themeBtn").onclick = () => {
     $("#modeNote").hidden = mode !== "local";
     await Auth.init(mode);
     await refresh();
-    updateAcctBtn();
+    updateAcctBtn(); startLive();
   } catch(e){ toast("Couldn’t connect to the database: "+e.message); }
   renderDir();
   show(location.hash.slice(1) || "find");
