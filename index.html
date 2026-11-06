@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marine Assist – Marine services across the Maldives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --bg:#EEF3F4; --surface:#FFFFFF; --surface-2:#F5F8F9; --ink:#0D2236; --muted:#55687A; --line:#D3DDE2;
+  --hull:#0E2A47; --hull-ink:#E8F0F5; --hull-muted:#9FB4C6;
+  --lagoon:#127F7B; --lagoon-soft:#DCEFEE; --lagoon-line:#4FC3BD;
+  --signal:#F2B705; --signal-ink:#1C1500;
+  --alarm:#B3352A; --alarm-soft:#F8E3E0;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A1725; --surface:#102236; --surface-2:#0D1D2E; --ink:#E5EDF2; --muted:#93A7B8; --line:#21394F;
+    --hull:#06121F; --hull-ink:#E5EDF2; --hull-muted:#8FA6BA;
+    --lagoon:#3CC3BD; --lagoon-soft:#123438; --lagoon-line:#3CC3BD;
+    --signal:#F2C230; --signal-ink:#1C1500;
+    --alarm:#E66B5E; --alarm-soft:#3A1E1D;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A1725; --surface:#102236; --surface-2:#0D1D2E; --ink:#E5EDF2; --muted:#93A7B8; --line:#21394F;
+  --hull:#06121F; --hull-ink:#E5EDF2; --hull-muted:#8FA6BA;
+  --lagoon:#3CC3BD; --lagoon-soft:#123438; --lagoon-line:#3CC3BD;
+  --signal:#F2C230; --signal-ink:#1C1500;
+  --alarm:#E66B5E; --alarm-soft:#3A1E1D;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 72px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.05;margin:0;letter-spacing:.005em}
+p{margin:0}
+a{color:var(--lagoon)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px;border-radius:3px}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ============ HEADER ============ */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--hull)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--hull);color:var(--hull-ink);border-bottom:1px solid rgba(255,255,255,.08)}
+.top .wrap{display:flex;align-items:center;gap:20px;min-height:60px}
+.brand{display:flex;align-items:baseline;gap:8px;text-decoration:none;color:inherit;flex-shrink:0}
+.brand b{font:700 28px/1 var(--display);letter-spacing:.01em}
+.brand span{font-size:16px;color:var(--lagoon-line);font-family:"MV Faseyha","Faruma",serif}
+.nav{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav button{background:none;border:0;color:var(--hull-muted);padding:10px 14px;border-radius:6px;cursor:pointer;white-space:nowrap;font-weight:500}
+.nav button:hover{color:var(--hull-ink)}
+.nav button[aria-current="page"]{color:var(--hull-ink);box-shadow:inset 0 -3px 0 var(--signal);border-radius:0}
+.theme-btn{background:none;border:1px solid rgba(255,255,255,.18);color:var(--hull-muted);width:36px;height:36px;border-radius:50%;cursor:pointer;flex-shrink:0}
+.acct-btn{background:none;border:1px solid rgba(255,255,255,.28);color:var(--hull-ink);padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:600;white-space:nowrap;flex-shrink:0;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.acct-btn:hover{border-color:var(--signal)}
+
+/* Account */
+.auth{max-width:440px;margin:32px 0 64px}
+.auth .seg{margin-bottom:20px}
+.auth .linkbtn{background:none;border:0;padding:0;color:var(--lagoon);cursor:pointer;font-size:14.5px;text-decoration:underline}
+.auth .demo{margin-top:16px;font-size:14px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.dash{padding:32px 0 64px;display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start}
+.status{border-radius:8px;padding:16px 18px;margin-bottom:18px;border:1px solid var(--line);background:var(--surface)}
+.status b{font:600 22px/1.1 var(--display);display:block;margin-bottom:4px}
+.status.live{border-left:5px solid var(--lagoon)}
+.status.pending{border-left:5px solid var(--signal)}
+.status.rejected{border-left:5px solid var(--alarm)}
+.dash aside .panel{margin-bottom:12px}
+.dash aside .btn{width:100%;margin-top:8px}
+.dash h2{font-size:28px;margin-bottom:12px}
+@media (max-width:900px){.dash{grid-template-columns:1fr}}
+
+/* ============ BUTTONS & FORMS ============ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:6px;padding:11px 18px;font-weight:600;cursor:pointer;text-decoration:none;background:var(--lagoon);color:#fff;line-height:1.1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn:not(.ghost):not(.signal):not(.alarm):not(.on-dark){color:#04201F}}
+:root[data-theme="dark"] .btn:not(.ghost):not(.signal):not(.alarm):not(.on-dark){color:#04201F}
+.btn:hover{filter:brightness(1.07)}
+.btn.signal{background:var(--signal);color:var(--signal-ink)}
+.btn.alarm{background:var(--alarm);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.ghost:hover{box-shadow:inset 0 0 0 1px var(--muted)}
+.btn.small{padding:8px 12px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+label.f,span.f{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+label.f small,span.f small{font-weight:400;color:var(--muted)}
+.input,select.input,textarea.input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+textarea.input{min-height:96px;resize:vertical}
+.input:focus{outline:none;border-color:var(--lagoon);box-shadow:0 0 0 3px var(--lagoon-soft)}
+.field{margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.hint{font-size:13px;color:var(--muted);margin-top:4px}
+.err{font-size:14px;color:var(--alarm);margin-top:8px;font-weight:500}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 14px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:15px;cursor:pointer;padding:3px 0}
+.check input{margin-top:4px;accent-color:var(--lagoon);width:16px;height:16px;flex-shrink:0}
+
+/* ============ HERO ============ */
+.hero{position:relative;background:var(--hull);color:var(--hull-ink);overflow:hidden}
+.hero svg.depth{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hero .wrap{position:relative;padding-top:56px;padding-bottom:44px}
+.hero h1{font-size:clamp(40px,6.4vw,76px);max-width:15ch;font-weight:700}
+.hero p.lede{margin-top:16px;max-width:56ch;color:var(--hull-muted);font-size:18px}
+.searchbar{margin-top:28px;display:grid;grid-template-columns:1fr 220px auto;gap:8px;background:rgba(255,255,255,.06);padding:8px;border-radius:10px;max-width:820px;border:1px solid rgba(255,255,255,.12)}
+.searchbar .input{border:0;background:var(--surface);height:48px}
+.searchbar .btn{height:48px;padding:0 26px}
+.needs{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px;max-width:860px}
+.needs button{background:transparent;border:1px solid rgba(255,255,255,.22);color:var(--hull-ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:15px}
+.needs button:hover{border-color:var(--lagoon-line);color:#fff}
+.sos{margin-top:30px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding-top:20px;border-top:1px solid rgba(255,255,255,.12)}
+.sos p{color:var(--hull-muted);font-size:15px}
+.sos p strong{color:var(--hull-ink)}
+
+/* ============ DIRECTORY ============ */
+.dir{display:grid;grid-template-columns:270px 1fr;gap:28px;padding:32px 0 60px}
+.filters{align-self:start;position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;max-height:calc(100vh - 100px);overflow:auto}
+.filters h2{font-size:22px;margin-bottom:14px}
+.filters h3{font:600 15px/1.3 var(--body);margin:18px 0 8px}
+.filters .checks{grid-template-columns:1fr;gap:2px}
+.filters .check{font-size:14.5px}
+.filter-toggle{display:none}
+.res-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.res-head h2{font-size:28px}
+.res-head select{width:auto}
+.row{display:grid;grid-template-columns:1fr auto;gap:16px;padding:18px 20px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:6px;margin-bottom:10px}
+.row.is-verified{border-left-color:var(--lagoon)}
+.row.is-emergency{border-left-color:var(--alarm)}
+.row h3{font-size:24px}
+.linklike{background:none;border:0;padding:0;cursor:pointer;color:inherit;font:inherit;text-align:left}
+.linklike:hover{color:var(--lagoon)}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:14.5px;margin-top:4px}
+.meta span+span{padding-left:12px;border-left:1px solid var(--line)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font-size:13px;background:var(--surface-2);border:1px solid var(--line);padding:2px 9px;border-radius:4px;color:var(--ink)}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:10px;text-align:right}
+.rating{font-weight:600;font-size:15px;white-space:nowrap}
+.rating .star{color:var(--signal)}
+.rating small{color:var(--muted);font-weight:400}
+.badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:12.5px;font-weight:600;padding:3px 8px;border-radius:4px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.badge.ok{background:var(--lagoon-soft);color:var(--lagoon);border-color:transparent}
+.badge.alarm{background:var(--alarm-soft);color:var(--alarm);border-color:transparent}
+.badge.warn{background:var(--signal);color:var(--signal-ink);border-color:transparent}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:36px 24px;text-align:center}
+.empty h3{font-size:24px;margin-bottom:6px}
+.empty p{color:var(--muted);margin-bottom:16px}
+
+/* ============ PAGE SECTIONS ============ */
+.page-head{background:var(--hull);color:var(--hull-ink)}
+.page-head .wrap{padding-top:40px;padding-bottom:32px}
+.page-head h1{font-size:clamp(34px,5vw,54px)}
+.page-head p{color:var(--hull-muted);margin-top:10px;max-width:60ch}
+.page-head .actions{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px}
+.section{padding:32px 0 64px}
+
+/* Jobs */
+.job-filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.job-filters select{width:auto;min-width:180px}
+.job{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px 20px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:14px}
+.job.urg-emergency{border-left:4px solid var(--alarm)}
+.job h3{font-size:22px}
+.job .desc{margin-top:8px;max-width:70ch}
+.job-side{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+
+/* Register */
+.reg{display:grid;grid-template-columns:240px 1fr;gap:28px;padding:32px 0 64px}
+.steps{list-style:none;margin:0;padding:0;counter-reset:s;align-self:start;position:sticky;top:calc(env(safe-area-inset-top,0px) + 80px)}
+.steps li{counter-increment:s;display:flex;gap:12px;align-items:center;padding:10px 0;color:var(--muted);font-weight:500}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line);font:600 15px/1 var(--display);flex-shrink:0;background:var(--surface)}
+.steps li.on{color:var(--ink)}
+.steps li.on::before{border-color:var(--lagoon);background:var(--lagoon);color:#fff}
+.steps li.done::before{content:"✓";border-color:var(--lagoon);color:var(--lagoon)}
+.reg h2{font-size:30px;margin-bottom:4px}
+.reg .sub{color:var(--muted);margin-bottom:22px}
+.typepick{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.typepick label{display:block;border:1.5px solid var(--line);border-radius:8px;padding:14px;cursor:pointer;background:var(--surface)}
+.typepick input{position:absolute;opacity:0}
+.typepick b{display:block;font:600 20px/1.1 var(--display)}
+.typepick span{font-size:14px;color:var(--muted)}
+.typepick label:has(input:checked){border-color:var(--lagoon);background:var(--lagoon-soft)}
+.typepick label:has(input:focus-visible){outline:3px solid var(--signal);outline-offset:2px}
+.reg-nav{display:flex;justify-content:space-between;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+.summary dl{display:grid;grid-template-columns:180px 1fr;gap:8px 16px;margin:0}
+.summary dt{color:var(--muted);font-size:14.5px}
+.summary dd{margin:0}
+.done-box{text-align:left;max-width:60ch}
+.done-box h2{font-size:34px;margin-bottom:10px}
+.done-box code{background:var(--surface-2);padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+
+/* Admin */
+.seg{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+.seg button{background:none;border:0;padding:10px 16px;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
+.seg button[aria-selected="true"]{color:var(--ink);box-shadow:inset 0 -3px 0 var(--lagoon)}
+.adm-item{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px;margin-bottom:10px}
+.adm-item header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.adm-item h3{font-size:21px}
+.adm-item .btns{display:flex;gap:6px;flex-wrap:wrap}
+.adm-item details{margin-top:10px;font-size:14.5px}
+.adm-item details summary{cursor:pointer;color:var(--lagoon);font-weight:500}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;margin-top:8px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.gate{max-width:380px}
+
+/* Dialog */
+dialog{border:0;padding:0;border-radius:12px;background:var(--surface);color:var(--ink);width:min(720px,calc(100vw - 24px));max-height:calc(100vh - 40px);box-shadow:0 24px 60px rgba(4,16,30,.35)}
+dialog::backdrop{background:rgba(6,18,31,.6)}
+.dlg-head{position:sticky;top:0;background:var(--hull);color:var(--hull-ink);padding:22px 24px 18px;display:flex;justify-content:space-between;gap:16px;align-items:flex-start;z-index:1}
+.dlg-head h2{font-size:32px}
+.dlg-head .meta{color:var(--hull-muted)}
+.dlg-head .meta span+span{border-color:rgba(255,255,255,.2)}
+.x{background:none;border:1px solid rgba(255,255,255,.25);color:var(--hull-ink);width:36px;height:36px;border-radius:50%;cursor:pointer;flex-shrink:0;font-size:18px;line-height:1}
+.dlg-body{padding:22px 24px 26px}
+.dlg-body h3{font-size:21px;margin:22px 0 8px}
+.dlg-body h3:first-child{margin-top:0}
+.contact{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px;align-items:center}
+.review{border-top:1px solid var(--line);padding:12px 0}
+.review p{margin-top:4px}
+.review small{color:var(--muted)}
+.starpick{display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:2px}
+.starpick input{position:absolute;opacity:0}
+.starpick label{font-size:28px;cursor:pointer;color:var(--line);line-height:1}
+.starpick input:checked~label,.starpick label:hover,.starpick label:hover~label{color:var(--signal)}
+.starpick input:focus-visible+label{outline:3px solid var(--lagoon);border-radius:3px}
+
+/* Footer & toast */
+footer{background:var(--hull);color:var(--hull-muted);font-size:14.5px}
+footer .wrap{padding-top:28px;padding-bottom:32px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+footer b{color:var(--hull-ink)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:8px;font-weight:500;z-index:100;max-width:calc(100vw - 32px)}
+.mode-note{background:var(--signal);color:var(--signal-ink);font-size:14px;text-align:center;padding:6px 12px}
+
+/* ============ WORKSPACE & BILLING ============ */
+.ws{padding-top:24px;padding-bottom:64px}
+.ws .dash{padding-top:4px}
+.ws-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.ws-bar h2{font-size:28px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 18px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.item h3{font-size:21px}
+.item .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.amt{font:600 21px/1 var(--display);white-space:nowrap}
+.count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--signal);color:var(--signal-ink);font-size:12px;margin-left:6px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}
+.scroll-x{overflow-x:auto}
+.lines{width:100%;border-collapse:collapse;min-width:560px}
+.lines th{text-align:left;font-size:13px;color:var(--muted);font-weight:600;padding:6px 4px}
+.lines td{padding:4px;vertical-align:middle}
+.lines .input{padding:8px 10px}
+.lines .num{width:80px}.lines .price{width:130px}.lines .lt{width:130px;text-align:right;font-weight:600;white-space:nowrap}
+.lines .rm{width:40px}
+.lines .r,.totals .r{text-align:right}
+.totals{margin-left:auto;max-width:340px;display:grid;grid-template-columns:1fr auto;gap:6px 16px;margin-top:14px}
+.totals .g{font:700 22px/1.2 var(--display);border-top:2px solid var(--ink);padding-top:6px}
+.sub-h{font:600 20px/1.2 var(--display);margin:22px 0 10px}
+.bank{border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-bottom:8px;background:var(--surface-2)}
+.bank code{font-size:17px;letter-spacing:.03em}
+.bank-row{display:grid;grid-template-columns:1.2fr 1.3fr 1.3fr 100px 44px;gap:8px;margin-bottom:8px;align-items:end}
+.cdoc{margin-bottom:16px}
+.payline{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.paid-note{margin-top:14px;font-weight:600;color:var(--lagoon)}
+.btn.on-dark{background:transparent;color:var(--hull-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+dialog.wide{width:min(940px,calc(100vw - 24px))}
+.linkbox{display:flex;gap:8px;margin:12px 0}
+.linkbox .input{font-size:14px}
+/* printable sheet: always paper-white */
+.sheet{background:#fff;color:#14202B;padding:36px 40px;font:14px/1.5 var(--body);border:1px solid #DDE3E7;border-radius:4px;position:relative;overflow-x:auto}
+.sheet .sh-top{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;border-bottom:3px solid #0E2A47;padding-bottom:18px}
+.sheet h2{font:700 26px/1.1 var(--display);color:#0E2A47;margin-bottom:6px}
+.sheet .sh-title h1{font:700 36px/1 var(--display);color:#0E2A47;text-align:right}
+.sheet dl{display:grid;grid-template-columns:auto auto;gap:2px 12px;margin:10px 0 0;justify-content:end}
+.sheet dt{color:#5A6B7A}.sheet dd{margin:0;font-weight:600;text-align:right}
+.sheet .sh-to{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+.sheet .lbl{font-size:12.5px;color:#5A6B7A;font-weight:600;margin-bottom:2px}
+.sheet table{width:100%;border-collapse:collapse;margin-top:6px}
+.sheet th{text-align:left;background:#EEF3F4;padding:8px;font-size:13px}
+.sheet td{padding:8px;border-bottom:1px solid #E3E8EB;vertical-align:top}
+.sheet .r{text-align:right;white-space:nowrap}
+.sheet .sh-tot{margin-left:auto;width:min(320px,100%);display:grid;grid-template-columns:1fr auto;gap:4px 16px;margin-top:12px}
+.sheet .sh-tot .g{font:700 20px/1.3 var(--display);border-top:2px solid #0E2A47;padding-top:4px}
+.sheet .sh-notes{margin-top:20px}
+.sheet .sh-pay{margin-top:20px;padding:14px 16px;border:1px solid #DDE3E7;border-radius:4px;background:#F5F9F9}
+.sheet .sh-pay p{margin-top:6px}
+.sheet .stamp{position:absolute;right:48px;top:150px;border:3px solid #127F7B;color:#127F7B;font:700 26px/1 var(--display);padding:6px 16px;transform:rotate(-8deg);opacity:.85}
+.sheet .stamp.void{border-color:#B3352A;color:#B3352A}
+.sheet .foot{margin-top:28px;font-size:12px;color:#7A8996}
+#printRoot{display:none}
+@media print{
+  body>*:not(#printRoot){display:none!important}
+  #printRoot{display:block!important}
+  #printRoot .sheet{border:0;padding:0}
+  @page{margin:14mm}
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width:900px){
+  .dir{grid-template-columns:1fr}
+  .filters{position:static;max-height:none;display:none}
+  .filters.open{display:block}
+  .filter-toggle{display:inline-flex}
+  .reg{grid-template-columns:1fr}
+  .steps{position:static;display:flex;gap:6px;overflow-x:auto}
+  .steps li{font-size:0;padding:0}
+  .steps li::before{font-size:15px}
+}
+@media (max-width:640px){
+  .searchbar{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .row,.job{grid-template-columns:1fr}
+  .row-side,.job-side{align-items:flex-start;text-align:left}
+  .badges{justify-content:flex-start}
+  .typepick{grid-template-columns:1fr}
+  .summary dl,.kv{grid-template-columns:1fr}
+  .summary dt{margin-top:6px}
+  .grid3{grid-template-columns:1fr}
+  .item{grid-template-columns:1fr}
+  .item .acts{justify-content:flex-start}
+  .bank-row{grid-template-columns:1fr 1fr}
+  .sheet{padding:20px}
+  .sheet .sh-to{grid-template-columns:1fr}
+  .brand span{display:none}
+  .brand b{font-size:24px}
+  .top .wrap{gap:12px}
+  .hero .wrap{padding-top:36px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="mode-note" id="modeNote" hidden>Demo mode: data is saved in this browser only. Add your Firebase config at the top of the script to go live.</div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#find" data-go="find"><b>Marine Assist</b><span lang="dv">މެރިން އެސިސްޓް</span></a>
+    <nav class="nav" aria-label="Main">
+      <button data-view="find">Find help</button>
+      <button data-view="requests">Request board</button>
+      <button data-view="register" id="navBiz">List your business</button>
+    </nav>
+    <button class="acct-btn" id="acctBtn" data-go="register">Sign in</button>
+    <button class="theme-btn" id="themeBtn" aria-label="Switch light or dark mode">◐</button>
+  </div>
+</header>
+
+<main>
+<!-- ================= FIND ================= -->
+<section class="view" id="view-find">
+  <div class="hero">
+    <svg class="depth" id="depth" aria-hidden="true" preserveAspectRatio="xMidYMid slice"></svg>
+    <div class="wrap">
+      <h1>Find a marine engineer or parts shop on any atoll.</h1>
+      <p class="lede">Engine trouble, a cracked hull, a radio that won’t transmit. Search marine service providers across the Maldives, or post a request and let them call you.</p>
+      <form class="searchbar" id="heroSearch" role="search">
+        <label class="sr" for="q">What do you need?</label>
+        <input class="input" id="q" type="search" placeholder="What do you need? e.g. Yamaha 200 service, life raft inspection">
+        <label class="sr" for="heroAtoll">Atoll</label>
+        <select class="input" id="heroAtoll"></select>
+        <button class="btn signal" type="submit">Search</button>
+      </form>
+      <div class="needs" id="needs" aria-label="Common needs"></div>
+      <div class="sos">
+        <button class="btn alarm" id="sosBtn" type="button">Broken down? Show 24/7 help</button>
+        <p>In a life-threatening emergency at sea, call the <strong>MNDF Coast Guard on 191</strong> first.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="dir" id="results">
+      <aside class="filters" id="filters" aria-label="Filters">
+        <h2>Filters</h2>
+        <label class="f" for="fAtoll">Serves this atoll</label>
+        <select class="input" id="fAtoll"></select>
+        <h3>Provider type</h3>
+        <select class="input" id="fType" aria-label="Provider type"></select>
+        <h3>Engine or equipment brand</h3>
+        <select class="input" id="fBrand" aria-label="Brand"></select>
+        <h3>Availability</h3>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="fEmergency"> 24/7 breakdown callouts</label>
+          <label class="check"><input type="checkbox" id="fMobile"> Comes to your boat</label>
+          <label class="check"><input type="checkbox" id="fVerified"> Verified only</label>
+        </div>
+        <h3>Services</h3>
+        <div class="checks" id="fCats"></div>
+        <button class="btn ghost small" id="resetBtn" style="margin-top:16px;width:100%">Clear all filters</button>
+      </aside>
+      <div>
+        <div class="res-head">
+          <h2 id="resCount">Providers</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost small filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filters">Filters</button>
+            <label class="sr" for="sortSel">Sort</label>
+            <select class="input" id="sortSel">
+              <option value="rating">Best rated</option>
+              <option value="new">Newest</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </div>
+        </div>
+        <div id="resList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= REQUESTS ================= -->
+<section class="view" id="view-requests" hidden>
+  <div class="page-head"><div class="wrap">
+    <h1>Request board</h1>
+    <p>Describe the problem with your boat and where it is. Providers who can help will call you or send you a quotation on WhatsApp.</p>
+    <div class="actions"><button class="btn signal" id="postJobBtn">Post a request</button></div>
+  </div></div>
+  <div class="wrap section">
+    <div class="job-filters">
+      <label class="sr" for="jAtoll">Atoll</label><select class="input" id="jAtoll"></select>
+      <label class="sr" for="jCat">Service</label><select class="input" id="jCat"></select>
+    </div>
+    <div id="jobList"></div>
+  </div>
+</section>
+
+<!-- ================= BUSINESS ================= -->
+<section class="view" id="view-register" hidden>
+  <div class="page-head"><div class="wrap">
+    <h1 id="bizTitle">List your marine business</h1>
+    <p id="bizLede">Freelance engineers, workshops, parts shops and marine companies can list for free. Every listing is checked by an admin before it goes live.</p>
+  </div></div>
+  <div class="wrap">
+    <!-- Sign in / create account -->
+    <div class="auth" id="authBox" hidden>
+      <div class="seg" role="tablist">
+        <button type="button" role="tab" data-auth="signin" aria-selected="true">Sign in</button>
+        <button type="button" role="tab" data-auth="signup" aria-selected="false">Create account</button>
+      </div>
+      <form class="panel" id="authForm" novalidate>
+        <p id="authIntro" style="margin-bottom:16px;color:var(--muted)">Sign in to manage your listing.</p>
+        <div class="field"><label class="f" for="aEmail">Email</label><input class="input" id="aEmail" type="email" autocomplete="email"></div>
+        <div class="field"><label class="f" for="aPass">Password</label><input class="input" id="aPass" type="password" autocomplete="current-password"></div>
+        <div class="field" id="aPass2Wrap" hidden><label class="f" for="aPass2">Confirm password</label><input class="input" id="aPass2" type="password" autocomplete="new-password"><p class="hint">At least 8 characters.</p></div>
+        <p class="err" id="authErr" role="alert"></p>
+        <button class="btn" id="authSubmit" style="width:100%;margin-top:6px">Sign in</button>
+        <p style="margin-top:14px"><button type="button" class="linkbtn" id="forgotBtn">Forgot password?</button></p>
+        <p class="demo" id="demoHint" hidden>Demo account: <b>demo@marineassist.mv</b> / <b>demo1234</b> (owns Hulhumalé Outboard Clinic).</p>
+      </form>
+    </div>
+
+    <!-- Business workspace -->
+    <div class="ws" id="wsBox" hidden>
+      <div class="seg" role="tablist" id="wsTabs">
+        <button type="button" role="tab" data-ws="requests">Requests</button>
+        <button type="button" role="tab" data-ws="quotes">Quotations</button>
+        <button type="button" role="tab" data-ws="invoices">Invoices</button>
+        <button type="button" role="tab" data-ws="payments">Payments</button>
+        <button type="button" role="tab" data-ws="listing">My listing</button>
+        <button type="button" role="tab" data-ws="settings">Billing settings</button>
+      </div>
+      <div id="wsPanel"></div>
+      <div class="dash" id="dashBox" hidden>
+        <div>
+          <div class="status" id="dashStatus"></div>
+          <div class="panel"><h2 id="dashName"></h2><div class="summary" id="dashSummary"></div></div>
+          <div class="panel" style="margin-top:16px"><h2>Reviews</h2><div id="dashReviews"></div></div>
+        </div>
+        <aside>
+          <div class="panel">
+            <span class="f">Signed in as</span>
+            <p id="dashEmail" style="word-break:break-all"></p>
+            <button class="btn" id="editBtn">Edit listing</button>
+            <button class="btn ghost" id="viewPublicBtn">View public listing</button>
+            <button class="btn ghost" id="pauseBtn"></button>
+            <button class="btn ghost" id="signOutBtn">Sign out</button>
+          </div>
+        </aside>
+      </div>
+    </div><!-- /wsBox -->
+
+    <div class="reg" id="regBox" hidden>
+      <ol class="steps" id="steps">
+        <li>Who you are</li><li>What you do</li><li>Where to find you</li><li>Check and submit</li>
+      </ol>
+      <div class="panel">
+        <form id="regForm" novalidate>
+          <fieldset data-step="0" style="border:0;padding:0;margin:0">
+            <h2>Who you are</h2>
+            <p class="sub">Tell boat owners who they’ll be dealing with.</p>
+            <div class="typepick" id="typePick"></div>
+            <div class="grid2">
+              <div class="field"><label class="f" for="rName">Business or full name</label><input class="input" id="rName" required></div>
+              <div class="field"><label class="f" for="rOwner">Contact person <small>(optional)</small></label><input class="input" id="rOwner"></div>
+              <div class="field"><label class="f" for="rRegNo">Business registration no. <small>(optional for freelancers)</small></label><input class="input" id="rRegNo" placeholder="e.g. SP-1234/2024"></div>
+              <div class="field"><label class="f" for="rYears">Years of experience</label><input class="input" id="rYears" type="number" min="0" max="70"></div>
+            </div>
+            <div class="field"><label class="f" for="rAbout">About your work</label><textarea class="input" id="rAbout" maxlength="600" placeholder="What you specialise in, the kind of boats you work on, anything that sets you apart."></textarea></div>
+          </fieldset>
+          <fieldset data-step="1" hidden style="border:0;padding:0;margin:0">
+            <h2>What you do</h2>
+            <p class="sub">Pick every service you offer. Boat owners filter by these.</p>
+            <div class="field"><span class="f">Services</span><div class="checks" id="rCats"></div></div>
+            <div class="field"><span class="f">Brands you service or stock <small>(optional)</small></span><div class="checks" id="rBrands"></div></div>
+            <div class="field"><label class="f" for="rCerts">Certifications or training <small>(optional)</small></label><input class="input" id="rCerts" placeholder="e.g. Yamaha certified technician, MQA marine engineer licence"></div>
+            <div class="grid2">
+              <div class="field"><label class="f" for="rHours">Working hours</label><input class="input" id="rHours" placeholder="e.g. Sat–Thu, 8:00–17:00"></div>
+              <div class="field" style="padding-top:26px">
+                <label class="check"><input type="checkbox" id="rMobile"> I come to the boat or jetty</label>
+                <label class="check"><input type="checkbox" id="rEmergency"> I take 24/7 breakdown callouts</label>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset data-step="2" hidden style="border:0;padding:0;margin:0">
+            <h2>Where to find you</h2>
+            <p class="sub">Your base, the atolls you cover, and how customers reach you.</p>
+            <div class="grid2">
+              <div class="field"><label class="f" for="rAtoll">Base atoll</label><select class="input" id="rAtoll" required></select></div>
+              <div class="field"><label class="f" for="rIsland">Island</label><input class="input" id="rIsland" required placeholder="e.g. Hulhumalé"></div>
+            </div>
+            <div class="field"><label class="f" for="rAddress">Workshop or shop address <small>(optional)</small></label><input class="input" id="rAddress"></div>
+            <div class="field"><span class="f">Other atolls you cover</span>
+              <label class="check" style="margin-bottom:6px"><input type="checkbox" id="rAll"> Whole country</label>
+              <div class="checks" id="rCoverage"></div>
+            </div>
+            <div class="grid2">
+              <div class="field"><label class="f" for="rPhone">Phone</label><input class="input" id="rPhone" inputmode="tel" required placeholder="7-digit number"><p class="hint">Shown on your listing.</p></div>
+              <div class="field"><label class="f" for="rWhatsapp">WhatsApp <small>(if different)</small></label><input class="input" id="rWhatsapp" inputmode="tel"></div>
+              <div class="field"><label class="f" for="rViber">Viber <small>(optional)</small></label><input class="input" id="rViber" inputmode="tel"></div>
+              <div class="field"><label class="f" for="rEmail">Public email <small>(optional, shown on listing)</small></label><input class="input" id="rEmail" type="email"></div>
+            </div>
+          </fieldset>
+          <fieldset data-step="3" hidden style="border:0;padding:0;margin:0">
+            <h2>Check and submit</h2>
+            <p class="sub">Make sure everything is right. You can edit your listing any time after signing in.</p>
+            <div class="summary" id="regSummary"></div>
+            <label class="check" style="margin-top:20px"><input type="checkbox" id="rAgree"> I confirm these details are accurate and I’m allowed to list this business.</label>
+          </fieldset>
+          <p class="err" id="regErr" role="alert"></p>
+          <div class="reg-nav">
+            <button type="button" class="btn ghost" id="regBack">Back</button>
+            <div style="display:flex;gap:8px"><button type="button" class="btn ghost" id="regCancel" hidden>Cancel editing</button><button type="button" class="btn" id="regNext">Continue</button></div>
+          </div>
+        </form>
+        <div class="done-box" id="regDone" hidden>
+          <h2>Submitted for review</h2>
+          <p>Thanks. An admin will check your details, and your listing goes live once it’s approved.</p>
+          <p style="margin-top:12px">Your reference: <code id="regRef"></code></p>
+          <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn" id="toDash">Go to my workspace</button>
+            <button class="btn ghost" data-go="find">Back to the directory</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ADMIN (not in menu: open #admin) ================= -->
+<section class="view" id="view-admin" hidden>
+  <div class="page-head"><div class="wrap">
+    <h1>Admin</h1>
+    <p>Approve new listings, mark trusted providers as verified, and manage the request board.</p>
+  </div></div>
+  <div class="wrap section">
+    <form class="panel gate" id="gate">
+      <div id="pinWrap"><label class="f" for="pin">Admin PIN</label>
+      <input class="input" id="pin" type="password" inputmode="numeric" autocomplete="off"></div>
+      <div id="admLoginWrap" hidden>
+        <div class="field"><label class="f" for="admEmail">Admin email</label><input class="input" id="admEmail" type="email" autocomplete="email"></div>
+        <label class="f" for="admPass">Password</label><input class="input" id="admPass" type="password" autocomplete="current-password">
+      </div>
+      <p class="err" id="pinErr" role="alert"></p>
+      <button class="btn" style="margin-top:12px">Open admin</button>
+    </form>
+    <div id="adminArea" hidden>
+      <p style="margin-bottom:12px"><button class="btn ghost small" id="admOut">Leave admin</button></p>
+      <div class="seg" role="tablist">
+        <button role="tab" data-tab="pending" aria-selected="true">Waiting for approval</button>
+        <button role="tab" data-tab="providers" aria-selected="false">All providers</button>
+        <button role="tab" data-tab="jobs" aria-selected="false">Requests</button>
+      </div>
+      <div id="adminList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CUSTOMER REQUEST PAGE ================= -->
+<section class="view" id="view-case" hidden>
+  <div class="page-head"><div class="wrap">
+    <h1 id="cTitle">Your request</h1>
+    <p id="cLede"></p>
+    <div class="actions" id="cContact"></div>
+  </div></div>
+  <div class="wrap section" id="cBody"></div>
+</section>
+</main>
+
+<footer><div class="wrap">
+  <p><b>Marine Assist</b> marine services and billing for the Maldives.</p>
+  <p>Run a marine business? <a href="#register" data-go="register" style="color:var(--signal)">List it for free</a>.</p>
+</div></footer>
+
+<dialog id="provDlg" aria-labelledby="provTitle"></dialog>
+
+<dialog id="jobDlg" aria-labelledby="jobTitle">
+  <div class="dlg-head"><div><h2 id="jobTitle">Post a request</h2><p class="meta"><span id="jobSub">Providers will contact you directly</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+  <form class="dlg-body" id="jobForm" novalidate>
+    <div class="field"><label class="f" for="jT">What’s the problem?</label><input class="input" id="jT" maxlength="90" placeholder="e.g. Port engine overheating, need a check today"></div>
+    <div class="grid2">
+      <div class="field"><label class="f" for="jC">Service needed</label><select class="input" id="jC"></select></div>
+      <div class="field"><label class="f" for="jB">Boat type</label><select class="input" id="jB"></select></div>
+    </div>
+    <div class="field"><label class="f" for="jE">Engine or equipment <small>(make, model, horsepower)</small></label><input class="input" id="jE" placeholder="e.g. 2 × Yamaha F200"></div>
+    <div class="field"><label class="f" for="jD">Details <small>(optional)</small></label><textarea class="input" id="jD" maxlength="600" placeholder="What happened, any error codes, what you’ve already tried."></textarea></div>
+    <div class="grid2">
+      <div class="field"><label class="f" for="jA">Atoll</label><select class="input" id="jA"></select></div>
+      <div class="field"><label class="f" for="jI">Island or location</label><input class="input" id="jI" placeholder="e.g. Maafushi jetty"></div>
+    </div>
+    <div class="field"><span class="f">How urgent?</span>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label class="check"><input type="radio" name="urg" value="emergency"> Emergency, today</label>
+        <label class="check"><input type="radio" name="urg" value="week" checked> This week</label>
+        <label class="check"><input type="radio" name="urg" value="flexible"> Flexible</label>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="f" for="jN" id="jNL">Your name</label><input class="input" id="jN"></div>
+      <div class="field"><label class="f" for="jP">Phone</label><input class="input" id="jP" inputmode="tel" placeholder="7-digit number"><p class="hint" id="jPH">Shown on the request board so providers can call you.</p></div>
+    </div>
+    <p class="err" id="jobErr" role="alert"></p>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button class="btn">Send</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="caseDlg" class="wide"></dialog>
+<dialog id="docDlg" class="wide"></dialog>
+<dialog id="viewDlg" class="wide"></dialog>
+<dialog id="payDlg"></dialog>
+<dialog id="slipDlg"></dialog>
+<dialog id="linkDlg"></dialog>
+<datalist id="bankList"><option>Bank of Maldives</option><option>Maldives Islamic Bank</option><option>Commercial Bank of Maldives</option><option>State Bank of India</option><option>Mauritius Commercial Bank</option><option>Bank of Ceylon</option><option>Habib Bank</option></datalist>
+<div id="printRoot"></div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+
+/* =====================================================================
+   CONFIG
+   - firebase: paste your Firebase web config object to store data in
+     Firestore (collections: "providers", "jobs"). Leave null for demo
+     mode, which saves to this browser only and loads sample listings.
+   - Business accounts: demo mode keeps accounts in this browser.
+     With Firebase, enable Email/Password in Firebase Authentication.
+   - Admin: the Admin page is not in the menu; open it at  yoursite/#admin
+     Demo mode uses adminPin. With Firebase, only the emails in
+     adminEmails can open it (PIN is ignored).
+   ===================================================================== */
+const CONFIG = {
+  firebase: null,
+  // firebase: { apiKey:"...", authDomain:"...", projectId:"...", storageBucket:"...", messagingSenderId:"...", appId:"..." },
+  adminPin: "2468",
+  adminEmails: ["vaddever@gmail.com"]
+};
+
+/* ============ REFERENCE DATA ============ */
+const CATS = [
+  ["engine","Engine repair and service"],["electrical","Marine electrical"],["navcom","Navigation and radio"],
+  ["hull","Fiberglass and hull repair"],["carpentry","Dhoni and wooden boat carpentry"],["welding","Welding and fabrication"],
+  ["propshaft","Propeller, shaft and steering"],["paint","Painting and antifouling"],["cooling","Refrigeration and AC"],
+  ["safety","Safety equipment"],["dive","Dive gear and compressors"],["parts","Spare parts and chandlery"],
+  ["haulout","Slipway and haul-out"],["survey","Marine survey and inspection"],["canvas","Canvas, covers and upholstery"],
+  ["towing","Towing and salvage"]
+];
+const CAT = Object.fromEntries(CATS);
+const NEEDS = [
+  ["Engine won’t start","engine"],["Need spare parts","parts"],["Hull or fiberglass damage","hull"],
+  ["Radio or GPS fault","navcom"],["Electrical problem","electrical"],["Propeller or steering","propshaft"],
+  ["Safety gear inspection","safety"],["Need a haul-out","haulout"]
+];
+const ATOLLS = ["Malé City","Haa Alif","Haa Dhaalu","Shaviyani","Noonu","Raa","Baa","Lhaviyani","Kaafu","Alif Alif","Alif Dhaalu","Vaavu","Meemu","Faafu","Dhaalu","Thaa","Laamu","Gaafu Alif","Gaafu Dhaalu","Fuvahmulah","Addu City"];
+const BRANDS = ["Yamaha","Suzuki","Mercury","Honda","Tohatsu","Evinrude","Yanmar","Volvo Penta","Cummins","Caterpillar","MAN","Mitsubishi","Isuzu","Garmin","Furuno","Raymarine","Simrad","Icom"];
+const BOATS = ["Speedboat","Dhoni","Fishing vessel","Safari boat or yacht","Ferry","Cargo vessel","Dinghy or jet ski","Other"];
+const TYPES = {engineer:["Freelance engineer","An individual mechanic or technician"],workshop:["Workshop","A repair yard or service centre"],shop:["Parts shop","Spares, chandlery or equipment sales"],company:["Marine company","Multi-service firm or contractor"]};
+
+/* ============ SAMPLE DATA (demo mode only) ============ */
+const BRAND = "Marine Assist";
+const now = Date.now(), day = 864e5;
+const isoD = t => new Date(t).toISOString().slice(0,10);
+const SEED_PROVIDERS = [
+  {id:"p1",ownerUid:"demo-owner",ownerEmail:"demo@marineassist.mv",settings:{docName:"Hulhumalé Outboard Clinic",address:"Sample address, Hulhumalé Phase 2",tin:"SAMPLE-TIN-1001",quotePrefix:"QT-",invoicePrefix:"INV-",nextQuote:2,nextInvoice:2,taxRate:8,taxLabel:"GST",currency:"MVR",validDays:14,dueDays:7,terms:"Parts are ordered once the quotation is accepted. 30-day warranty on labour.",banks:[{bank:"Bank of Maldives",name:"Hulhumale Outboard Clinic",number:"7730000000001",currency:"MVR"}]},type:"workshop",name:"Hulhumalé Outboard Clinic",owner:"Ahmed Nashid",regNo:"SAMPLE-001",years:12,about:"Outboard specialists. Full services, lower unit rebuilds and diagnostics for 4-stroke engines up to 350 hp. Pick-up from Hulhumalé and Malé jetties.",categories:["engine","propshaft","electrical"],brands:["Yamaha","Suzuki","Mercury"],certs:"Yamaha certified technicians",hours:"Sat–Thu, 8:00–18:00",mobileService:true,emergency:true,atoll:"Kaafu",island:"Hulhumalé",coverage:["Malé City","Kaafu","Vaavu"],phone:"7000101",whatsapp:"7000101",viber:"",email:"",address:"Sample address, Hulhumalé Phase 2",status:"approved",verified:true,createdAt:now-90*day,reviews:[{name:"Shifaz",rating:5,text:"Came to the jetty within an hour and found the fuel pump issue fast.",date:now-20*day},{name:"Aishath",rating:4,text:"Good service, a bit busy on weekends.",date:now-8*day}]},
+  {id:"p2",type:"shop",name:"Lagoon Spares and Chandlery",owner:"",regNo:"SAMPLE-002",years:8,about:"Genuine and aftermarket parts for outboards and marine diesels. Filters, impellers, props, anodes, ropes and deck hardware. Ships to islands by ferry or speedboat.",categories:["parts","safety"],brands:["Yamaha","Suzuki","Mercury","Yanmar","Volvo Penta"],certs:"",hours:"Daily, 9:00–22:00",mobileService:false,emergency:false,atoll:"Malé City",island:"Malé",coverage:["ALL"],phone:"7000102",whatsapp:"",viber:"7000102",email:"",address:"Sample address, Malé",status:"approved",verified:true,createdAt:now-120*day,reviews:[{name:"Ibrahim",rating:5,text:"Had the impeller kit in stock and sent it to Thinadhoo the same day.",date:now-30*day}]},
+  {id:"p3",type:"engineer",name:"Ismail Rasheed",owner:"Ismail Rasheed",regNo:"",years:20,about:"Diesel engineer for dhonis and fishing vessels. Overhauls, injector work, gearbox and alignment.",categories:["engine","propshaft"],brands:["Yanmar","Isuzu","Mitsubishi","Cummins"],certs:"Marine engineering diploma",hours:"On call",mobileService:true,emergency:true,atoll:"Raa",island:"Ungoofaaru",coverage:["Raa","Baa","Noonu","Lhaviyani"],phone:"7000103",whatsapp:"7000103",viber:"",email:"",address:"",status:"approved",verified:false,createdAt:now-40*day,reviews:[]},
+  {id:"p4",type:"workshop",name:"Thilafushi Marine Works",owner:"",regNo:"SAMPLE-004",years:15,about:"Steel and aluminium fabrication, welding, slipway for vessels up to 30 m, antifouling and hull painting.",categories:["welding","haulout","paint","hull"],brands:[],certs:"",hours:"Sat–Thu, 7:30–16:30",mobileService:false,emergency:false,atoll:"Kaafu",island:"Thilafushi",coverage:["Malé City","Kaafu","Alif Alif","Alif Dhaalu"],phone:"7000104",whatsapp:"",viber:"",email:"",address:"Sample address, Thilafushi",status:"approved",verified:true,createdAt:now-200*day,reviews:[{name:"Safari ops",rating:4,text:"Solid work on our haul-out and repaint. Book early.",date:now-60*day}]},
+  {id:"p5",type:"company",name:"North Point Navcom",owner:"",regNo:"SAMPLE-005",years:6,about:"Supply, installation and repair of chartplotters, radar, VHF radios, AIS and fish finders.",categories:["navcom","electrical"],brands:["Garmin","Furuno","Raymarine","Simrad","Icom"],certs:"Furuno trained installer",hours:"Sat–Thu, 9:00–17:00",mobileService:true,emergency:false,atoll:"Haa Dhaalu",island:"Kulhudhuffushi",coverage:["Haa Alif","Haa Dhaalu","Shaviyani","Noonu"],phone:"7000105",whatsapp:"7000105",viber:"",email:"",address:"",status:"approved",verified:false,createdAt:now-15*day,reviews:[]},
+  {id:"p6",type:"workshop",name:"Fuvahmulah Fiberglass Works",owner:"",regNo:"SAMPLE-006",years:9,about:"GRP repairs, gelcoat, transom rebuilds and new fiberglass dinghies.",categories:["hull","paint","canvas"],brands:[],certs:"",hours:"Sun–Thu, 8:00–17:00",mobileService:false,emergency:false,atoll:"Fuvahmulah",island:"Fuvahmulah",coverage:["Gaafu Alif","Gaafu Dhaalu","Addu City"],phone:"7000106",whatsapp:"",viber:"",email:"",address:"",status:"approved",verified:false,createdAt:now-70*day,reviews:[{name:"Hassan",rating:5,text:"Transom looks new.",date:now-12*day}]},
+  {id:"p7",type:"company",name:"Dive Air Services",owner:"",regNo:"SAMPLE-007",years:11,about:"Service of dive compressors, cylinder hydro testing, regulator servicing for resorts and liveaboards.",categories:["dive","safety"],brands:[],certs:"Cylinder testing facility",hours:"Sat–Thu, 8:00–17:00",mobileService:true,emergency:false,atoll:"Kaafu",island:"Maafushi",coverage:["Kaafu","Vaavu","Alif Dhaalu","Faafu"],phone:"7000107",whatsapp:"7000107",viber:"",email:"",address:"",status:"approved",verified:true,createdAt:now-50*day,reviews:[]},
+  {id:"p8",type:"engineer",name:"Addu Boat Electric",owner:"Mohamed Zahir",regNo:"",years:7,about:"Wiring, batteries, charging systems, solar, bilge pumps and lighting.",categories:["electrical","cooling"],brands:[],certs:"",hours:"Daily, 8:00–20:00",mobileService:true,emergency:true,atoll:"Addu City",island:"Hithadhoo",coverage:["Addu City","Fuvahmulah"],phone:"7000108",whatsapp:"7000108",viber:"",email:"",address:"",status:"approved",verified:false,createdAt:now-5*day,reviews:[]},
+  {id:"p9",type:"workshop",name:"Seaside Welding (sample pending)",owner:"",regNo:"SAMPLE-009",years:4,about:"Stainless rails, T-tops, ladders and custom fabrication.",categories:["welding"],brands:[],certs:"",hours:"Sat–Thu",mobileService:false,emergency:false,atoll:"Laamu",island:"Gan",coverage:["Laamu","Thaa"],phone:"7000109",whatsapp:"",viber:"",email:"",address:"",status:"pending",verified:false,createdAt:now-1*day,reviews:[]}
+];
+const SAMPLE_ITEMS = [{d:"100-hour service labour, Yamaha F200",q:2,p:850},{d:"Service kit: oil, filters, plugs, anodes",q:2,p:1150},{d:"Gear oil change",q:2,p:250}];
+const SEED_CASES = [
+  {id:"c1",providerId:"p1",ownerUid:"demo-owner",source:"direct",jobId:null,title:"Annual service for twin Yamaha F200",category:"engine",boatType:"Speedboat",engine:"2 × Yamaha F200",description:"Due for the 100-hour service.",atoll:"Kaafu",island:"Hulhumalé",urgency:"week",customer:{name:"Sample customer",phone:"7000301"},closed:false,docIds:["d1","d2"],createdAt:now-6*day},
+  {id:"c2",providerId:"p1",ownerUid:"demo-owner",source:"direct",jobId:null,title:"Lower unit leaking oil",category:"engine",boatType:"Speedboat",engine:"Suzuki DF140",description:"Oil on the skeg after every trip.",atoll:"Malé City",island:"Malé",urgency:"week",customer:{name:"Sample customer 2",phone:"7000302"},closed:false,docIds:[],createdAt:now-5*36e5}
+];
+const SEED_DOCS = [
+  {id:"d1",kind:"quote",number:"QT-0001",caseId:"c1",providerId:"p1",ownerUid:"demo-owner",customer:{name:"Sample customer",phone:"7000301"},currency:"MVR",items:SAMPLE_ITEMS,discount:0,taxRate:8,taxLabel:"GST",notes:"Parts are ordered once the quotation is accepted. 30-day warranty on labour.",issueDate:isoD(now-5*day),validUntil:isoD(now+9*day),status:"accepted",invoiceId:"d2",payments:[],createdAt:now-5*day},
+  {id:"d2",kind:"invoice",number:"INV-0001",caseId:"c1",quoteId:"d1",providerId:"p1",ownerUid:"demo-owner",customer:{name:"Sample customer",phone:"7000301"},currency:"MVR",items:SAMPLE_ITEMS,discount:0,taxRate:8,taxLabel:"GST",notes:"",issueDate:isoD(now-2*day),dueDate:isoD(now+5*day),status:"issued",payments:[{id:"pay1",amount:4860,reference:"INV-0001",payer:"Sample customer",method:"transfer",slipId:"s1",status:"pending",at:now-3*36e5}],createdAt:now-2*day}
+];
+const SEED_SLIPS = [{id:"s1",type:"image/svg+xml",name:"sample-slip.svg",createdAt:now-3*36e5,
+  data:"data:image/svg+xml;base64,"+btoa('<svg xmlns="http://www.w3.org/2000/svg" width="520" height="640"><rect width="100%" height="100%" fill="#fff"/><rect x="0" y="0" width="520" height="70" fill="#C8102E"/><text x="28" y="45" font-family="Arial" font-size="24" fill="#fff">Sample bank transfer</text><text x="28" y="130" font-family="Arial" font-size="18" fill="#333">Transfer successful</text><text x="28" y="190" font-family="Arial" font-size="16" fill="#666">Amount</text><text x="28" y="220" font-family="Arial" font-size="26" fill="#111">MVR 4,860.00</text><text x="28" y="280" font-family="Arial" font-size="16" fill="#666">To account</text><text x="28" y="306" font-family="Arial" font-size="20" fill="#111">7730000000001</text><text x="28" y="366" font-family="Arial" font-size="16" fill="#666">Remarks</text><text x="28" y="392" font-family="Arial" font-size="20" fill="#111">INV-0001</text><text x="28" y="600" font-family="Arial" font-size="13" fill="#999">Demo image, not a real slip</text></svg>')}];
+const SEED_JOBS = [
+  {id:"j1",title:"Starboard engine losing power above 3000 rpm",category:"engine",boatType:"Speedboat",engine:"2 × Suzuki DF250",description:"Started yesterday after refuelling. Water separator looks clean.",atoll:"Kaafu",island:"Guraidhoo",urgency:"emergency",name:"Sample request",phone:"7000201",status:"open",createdAt:now-3*36e5},
+  {id:"j2",title:"VHF radio not transmitting",category:"navcom",boatType:"Dhoni",engine:"Icom IC-M330",description:"Receives fine, no transmit. Antenna cable may be damaged.",atoll:"Baa",island:"Eydhafushi",urgency:"week",name:"Sample request",phone:"7000202",status:"open",createdAt:now-2*day},
+  {id:"j3",title:"Quote for antifouling and haul-out, 18 m safari boat",category:"haulout",boatType:"Safari boat or yacht",engine:"",description:"Looking for slipway availability in January.",atoll:"Malé City",island:"Malé",urgency:"flexible",name:"Sample request",phone:"7000203",status:"open",createdAt:now-6*day}
+];
+
+/* ============ HELPERS ============ */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const digits = s => String(s||"").replace(/\D/g,"").replace(/^960/,"");
+const validPhone = s => /^[3-9]\d{6}$/.test(digits(s));
+const tel = p => "tel:+960" + digits(p);
+const wa = (p, msg) => "https://wa.me/960" + digits(p) + (msg ? "?text=" + encodeURIComponent(msg) : "");
+const viber = p => "viber://chat?number=%2B960" + digits(p);
+const fmtPhone = p => { const d = digits(p); return d.length===7 ? d.slice(0,3)+" "+d.slice(3) : d; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const avg = p => { const r = p.reviews||[]; return r.length ? r.reduce((a,b)=>a+b.rating,0)/r.length : 0; };
+const coverageText = p => (p.coverage||[]).includes("ALL") ? "Whole country" : [p.atoll, ...(p.coverage||[]).filter(a=>a!==p.atoll)].join(", ");
+function ago(t){ const s=(Date.now()-t)/1000; if(s<3600) return Math.max(1,Math.round(s/60))+" min ago"; if(s<86400) return Math.round(s/3600)+" h ago"; const d=Math.round(s/86400); return d+(d===1?" day ago":" days ago"); }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,3200); }
+function opts(list, first){ return (first!=null?`<option value="">${esc(first)}</option>`:"") + list.map(x=>Array.isArray(x)?`<option value="${esc(x[0])}">${esc(x[1])}</option>`:`<option>${esc(x)}</option>`).join(""); }
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("Could not load "+src)); document.head.appendChild(s); }); }
+
+/* ============ STORAGE (Firestore or local) ============ */
+const Store = (() => {
+  let db = null; const PFX = "marineassist_v1_"; const mem = {};
+  const read = c => { try { const v = localStorage.getItem(PFX+c); return v ? JSON.parse(v) : (mem[c]||null); } catch { return mem[c]||null; } };
+  const write = (c,a) => { mem[c]=a; try { localStorage.setItem(PFX+c, JSON.stringify(a)); } catch {} };
+  async function init(){
+    if (CONFIG.firebase){
+      await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+      await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
+      await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
+      firebase.initializeApp(CONFIG.firebase); db = firebase.firestore(); return "cloud";
+    }
+    const SEED = {providers:SEED_PROVIDERS, jobs:SEED_JOBS, cases:SEED_CASES, docs:SEED_DOCS, slips:SEED_SLIPS};
+    for (const [k,v] of Object.entries(SEED)) if (!read(k)) write(k, v);
+    return "local";
+  }
+  async function list(c){ if(db){ const s=await db.collection(c).get(); return s.docs.map(d=>({id:d.id,...d.data()})); } return read(c)||[]; }
+  async function add(c,o){ if(db){ const r=await db.collection(c).add(o); return {id:r.id,...o}; } const a=read(c)||[]; const n={id:uid(),...o}; a.push(n); write(c,a); return n; }
+  async function update(c,id,patch){ if(db){ await db.collection(c).doc(id).update(patch); return; } const a=read(c)||[]; const i=a.findIndex(x=>x.id===id); if(i>-1){ a[i]={...a[i],...patch}; write(c,a); } }
+  async function get(c,id){ if(db){ const d=await db.collection(c).doc(id).get(); return d.exists ? {id:d.id,...d.data()} : null; } return (read(c)||[]).find(x=>x.id===id) || null; }
+  async function query(c,f,v){ if(db){ const q=await db.collection(c).where(f,"==",v).get(); return q.docs.map(d=>({id:d.id,...d.data()})); } return (read(c)||[]).filter(x=>x[f]===v); }
+  async function remove(c,id){ if(db){ await db.collection(c).doc(id).delete(); return; } write(c,(read(c)||[]).filter(x=>x.id!==id)); }
+  return {init,list,add,update,remove,get,query};
+})();
+
+/* ============ ACCOUNTS (Firebase Auth or local demo) ============ */
+const Auth = (() => {
+  let fb = null, user = null; const PFX = "marineassist_v1_";
+  const getAcc = () => { try { return JSON.parse(localStorage.getItem(PFX+"accounts")||"{}"); } catch { return {}; } };
+  const setAcc = a => { try { localStorage.setItem(PFX+"accounts", JSON.stringify(a)); } catch {} };
+  const setSession = u => { try { u ? localStorage.setItem(PFX+"session", JSON.stringify(u)) : localStorage.removeItem(PFX+"session"); } catch {} };
+  async function hash(t){
+    if(crypto?.subtle){ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("marineassist:"+t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+    return "plain:"+t;
+  }
+  const MSG = {"auth/email-already-in-use":"An account with this email already exists. Sign in instead.","auth/invalid-email":"Check the email address.",
+    "auth/weak-password":"Use at least 8 characters.","auth/invalid-credential":"Email or password is wrong.","auth/wrong-password":"Email or password is wrong.",
+    "auth/user-not-found":"No account with this email. Create one instead.","auth/too-many-requests":"Too many attempts. Wait a few minutes and try again."};
+  const fail = e => { throw new Error(MSG[e.code] || e.message); };
+  async function init(mode){
+    if(mode==="cloud"){
+      fb = firebase.auth();
+      await new Promise(r => { const un = fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email} : null; un(); r(); }); });
+      fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email} : null; onAuthChange(); });
+      return;
+    }
+    const acc = getAcc();
+    if(!acc["demo@marineassist.mv"]){ acc["demo@marineassist.mv"] = {uid:"demo-owner", hash: await hash("demo1234")}; setAcc(acc); }
+    try { user = JSON.parse(localStorage.getItem(PFX+"session")||"null"); } catch { user = null; }
+  }
+  async function signUp(email, pw){
+    email = email.trim().toLowerCase();
+    if(fb){ try { const c = await fb.createUserWithEmailAndPassword(email, pw); user = {uid:c.user.uid,email:c.user.email}; return user; } catch(e){ fail(e); } }
+    const acc = getAcc(); if(acc[email]) throw new Error(MSG["auth/email-already-in-use"]);
+    acc[email] = {uid: "u_"+uid(), hash: await hash(pw)}; setAcc(acc);
+    user = {uid: acc[email].uid, email}; setSession(user); return user;
+  }
+  async function signIn(email, pw){
+    email = email.trim().toLowerCase();
+    if(fb){ try { const c = await fb.signInWithEmailAndPassword(email, pw); user = {uid:c.user.uid,email:c.user.email}; return user; } catch(e){ fail(e); } }
+    const a = getAcc()[email]; if(!a || a.hash !== await hash(pw)) throw new Error(MSG["auth/invalid-credential"]);
+    user = {uid:a.uid, email}; setSession(user); return user;
+  }
+  async function signOut(){ if(fb) await fb.signOut(); user = null; setSession(null); }
+  async function reset(email){
+    if(fb){ try { await fb.sendPasswordResetEmail(email.trim()); return "We’ve emailed you a link to reset your password."; } catch(e){ fail(e); } }
+    return "Password reset emails work once Firebase is connected. In demo mode, create a new account.";
+  }
+  return {init, signUp, signIn, signOut, reset, get user(){ return user; }, get cloud(){ return !!fb; }};
+})();
+const isAdminUser = () => Auth.cloud && Auth.user && CONFIG.adminEmails.map(e=>e.toLowerCase()).includes((Auth.user.email||"").toLowerCase());
+const myListing = () => Auth.user ? state.providers.find(p => p.ownerUid === Auth.user.uid) : null;
+function onAuthChange(){
+  updateAcctBtn();
+  if(!$("#view-register").hidden) renderBiz();
+  if(!$("#view-admin").hidden) renderAdmin();
+}
+function updateAcctBtn(){
+  const b = $("#acctBtn"), u = Auth.user;
+  b.textContent = u ? "My account" : "Sign in";
+  b.title = u ? u.email : "";
+  $("#navBiz").textContent = u && myListing() ? "Workspace" : "List your business";
+}
+
+/* ============ STATE ============ */
+const state = {
+  providers: [], jobs: [],
+  f: {q:"",atoll:"",type:"",brand:"",cats:new Set(),mobile:false,emergency:false,verified:false},
+  sort: "rating", admin: false, adminTab: "pending"
+};
+async function refresh(){ [state.providers, state.jobs] = await Promise.all([Store.list("providers"), Store.list("jobs")]); }
+
+/* ============ NAVIGATION ============ */
+const VIEWS = ["find","requests","register","admin"];
+function show(view){
+  if(view && view.startsWith("c=")){ $$("dialog[open]").forEach(d=>d.close()); renderCustomerCase(decodeURIComponent(view.slice(2))); return; }
+  if(!VIEWS.includes(view)) view = "find";
+  $$(".view").forEach(v => v.hidden = v.id !== "view-"+view);
+  $$(".nav button").forEach(b => b.dataset.view===view ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
+  if(view==="requests") renderJobs();
+  if(view==="admin") renderAdmin();
+  if(view==="register") renderBiz();
+  if(location.hash !== "#"+view) history.replaceState(null,"","#"+view);
+  window.scrollTo(0,0);
+}
+document.addEventListener("click", e => {
+  const go = e.target.closest("[data-go]"); if(go){ e.preventDefault(); $$("dialog[open]").forEach(d=>d.close()); show(go.dataset.go); }
+  const nb = e.target.closest(".nav button"); if(nb) show(nb.dataset.view);
+});
+window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+
+/* ============ HERO DEPTH CONTOURS ============ */
+function drawDepth(){
+  const svg = $("#depth"), W=1400, H=620; svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  const reefs = [[1080,210,7,1.3],[1250,520,5,2.1],[160,560,4,4.2]];
+  let out = "";
+  reefs.forEach(([cx,cy,n,seed]) => {
+    for(let k=0;k<n*2;k++){
+      const r = 26 + k*30, pts=[];
+      for(let i=0;i<=96;i++){
+        const a = i/96*Math.PI*2;
+        const w = 1 + .22*Math.sin(3*a+seed) + .12*Math.sin(5*a+seed*2+k*.3) + .06*Math.sin(9*a+k);
+        pts.push([(cx+Math.cos(a)*r*w*1.35).toFixed(1),(cy+Math.sin(a)*r*w).toFixed(1)]);
+      }
+      const op = Math.max(.05, .42 - k*.03);
+      out += `<path d="M${pts.map(p=>p.join(",")).join("L")}Z" fill="none" stroke="var(--lagoon-line)" stroke-width="${k===0?1.6:1}" opacity="${op}"${k%4===3?' stroke-dasharray="2 5"':""}/>`;
+    }
+  });
+  svg.innerHTML = out;
+}
+
+/* ============ DIRECTORY ============ */
+function setupFind(){
+  $("#heroAtoll").innerHTML = opts(ATOLLS,"Any atoll");
+  $("#fAtoll").innerHTML = opts(ATOLLS,"Any atoll");
+  $("#fType").innerHTML = opts(Object.entries(TYPES).map(([k,v])=>[k,v[0]]),"All types");
+  $("#fBrand").innerHTML = opts(BRANDS,"Any brand");
+  $("#fCats").innerHTML = CATS.map(([k,v])=>`<label class="check"><input type="checkbox" value="${k}"> ${esc(v)}</label>`).join("");
+  $("#needs").innerHTML = NEEDS.map(([t,c])=>`<button type="button" data-cat="${c}">${esc(t)}</button>`).join("");
+
+  $("#heroSearch").addEventListener("submit", e => {
+    e.preventDefault(); state.f.q = $("#q").value; state.f.atoll = $("#heroAtoll").value; $("#fAtoll").value = state.f.atoll;
+    renderDir(); $("#results").scrollIntoView({behavior:"smooth"});
+  });
+  $("#needs").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    state.f.cats = new Set([b.dataset.cat]); syncCatBoxes(); renderDir(); $("#results").scrollIntoView({behavior:"smooth"});
+  });
+  $("#sosBtn").addEventListener("click", () => {
+    state.f.emergency = true; $("#fEmergency").checked = true; state.f.atoll = $("#heroAtoll").value; $("#fAtoll").value = state.f.atoll;
+    renderDir(); $("#results").scrollIntoView({behavior:"smooth"});
+  });
+  $("#fAtoll").onchange = e => { state.f.atoll = e.target.value; $("#heroAtoll").value = e.target.value; renderDir(); };
+  $("#fType").onchange = e => { state.f.type = e.target.value; renderDir(); };
+  $("#fBrand").onchange = e => { state.f.brand = e.target.value; renderDir(); };
+  $("#fEmergency").onchange = e => { state.f.emergency = e.target.checked; renderDir(); };
+  $("#fMobile").onchange = e => { state.f.mobile = e.target.checked; renderDir(); };
+  $("#fVerified").onchange = e => { state.f.verified = e.target.checked; renderDir(); };
+  $("#fCats").onchange = () => { state.f.cats = new Set($$("#fCats input:checked").map(i=>i.value)); renderDir(); };
+  $("#sortSel").onchange = e => { state.sort = e.target.value; renderDir(); };
+  $("#resetBtn").onclick = resetFilters;
+  $("#filterToggle").onclick = e => { const o = $("#filters").classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", o); };
+  $("#resList").addEventListener("click", e => { const b = e.target.closest("[data-open]"); if(b) openProvider(b.dataset.open); });
+}
+function syncCatBoxes(){ $$("#fCats input").forEach(i => i.checked = state.f.cats.has(i.value)); }
+function resetFilters(){
+  state.f = {q:"",atoll:"",type:"",brand:"",cats:new Set(),mobile:false,emergency:false,verified:false};
+  $("#q").value=""; $("#heroAtoll").value=""; $("#fAtoll").value=""; $("#fType").value=""; $("#fBrand").value="";
+  ["fEmergency","fMobile","fVerified"].forEach(id=>$("#"+id).checked=false); syncCatBoxes(); renderDir();
+}
+function filtered(){
+  const f = state.f, words = f.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const list = state.providers.filter(p => {
+    if(p.status!=="approved" || p.paused) return false;
+    if(f.type && p.type!==f.type) return false;
+    if(f.atoll){ const cov=p.coverage||[]; if(!(p.atoll===f.atoll || cov.includes(f.atoll) || cov.includes("ALL"))) return false; }
+    if(f.cats.size && !(p.categories||[]).some(c=>f.cats.has(c))) return false;
+    if(f.brand && !(p.brands||[]).includes(f.brand)) return false;
+    if(f.mobile && !p.mobileService) return false;
+    if(f.emergency && !p.emergency) return false;
+    if(f.verified && !p.verified) return false;
+    if(words.length){
+      const hay = [p.name,p.about,p.island,p.atoll,p.certs,TYPES[p.type]?.[0],...(p.brands||[]),...(p.categories||[]).map(c=>CAT[c])].join(" ").toLowerCase();
+      if(!words.every(w=>hay.includes(w))) return false;
+    }
+    return true;
+  });
+  const s = state.sort;
+  list.sort((a,b) => s==="name" ? a.name.localeCompare(b.name) : s==="new" ? b.createdAt-a.createdAt :
+    (b.verified-a.verified) || (avg(b)-avg(a)) || ((b.reviews||[]).length-(a.reviews||[]).length));
+  if(f.emergency) list.sort((a,b)=>(b.atoll===f.atoll)-(a.atoll===f.atoll));
+  return list;
+}
+function ratingHTML(p){
+  const n=(p.reviews||[]).length;
+  return n ? `<span class="rating"><span class="star" aria-hidden="true">★</span> ${avg(p).toFixed(1)} <small>(${n} review${n>1?"s":""})</small></span>` : `<span class="rating"><small>No reviews yet</small></span>`;
+}
+function badgesHTML(p){
+  return (p.verified?'<span class="badge ok">Verified</span>':"") + (p.emergency?'<span class="badge alarm">24/7 callouts</span>':"") + (p.mobileService?'<span class="badge">Comes to your boat</span>':"");
+}
+function renderDir(){
+  const list = filtered();
+  $("#resCount").textContent = list.length===1 ? "1 provider" : `${list.length} providers`;
+  if(!list.length){
+    $("#resList").innerHTML = `<div class="empty"><h3>No providers match yet</h3><p>Try fewer filters, or post a request so providers in your area can find you.</p>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn ghost" onclick="resetFilters()">Clear filters</button><button class="btn" data-go="requests">Post a request</button></div></div>`;
+    return;
+  }
+  $("#resList").innerHTML = list.map(p => {
+    const cats = p.categories||[], extra = cats.length>3 ? `<span class="tag">+${cats.length-3} more</span>` : "";
+    return `<article class="row${p.verified?" is-verified":""}${p.emergency&&state.f.emergency?" is-emergency":""}">
+      <div>
+        <h3><button class="linklike" data-open="${esc(p.id)}">${esc(p.name)}</button></h3>
+        <p class="meta"><span>${esc(TYPES[p.type]?.[0]||"")}</span><span>${esc(p.island)}, ${esc(p.atoll)}</span>${p.years?`<span>${esc(p.years)} yrs experience</span>`:""}</p>
+        <div class="tags">${cats.slice(0,3).map(c=>`<span class="tag">${esc(CAT[c]||c)}</span>`).join("")}${extra}</div>
+      </div>
+      <div class="row-side">
+        ${ratingHTML(p)}
+        <div class="badges">${badgesHTML(p)}</div>
+        <div class="row-actions"><a class="btn small" href="${tel(p.phone)}">Call</a><button class="btn small ghost" data-open="${esc(p.id)}">Details</button></div>
+      </div></article>`;
+  }).join("");
+}
+
+/* ============ PROVIDER DETAIL ============ */
+function openProvider(id){
+  const p = state.providers.find(x=>x.id===id); if(!p) return;
+  const d = $("#provDlg"), waNo = p.whatsapp || p.phone;
+  const reviews = (p.reviews||[]).slice().sort((a,b)=>b.date-a.date);
+  d.innerHTML = `
+    <div class="dlg-head"><div>
+      <h2 id="provTitle">${esc(p.name)}</h2>
+      <p class="meta"><span>${esc(TYPES[p.type]?.[0]||"")}</span><span>${esc(p.island)}, ${esc(p.atoll)}</span></p>
+      <div class="badges" style="justify-content:flex-start;margin-top:10px">${badgesHTML(p)}</div>
+    </div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      <h3>Contact</h3>
+      <div class="contact">
+        ${p.ownerUid && p.status==="approved" && !(Auth.user && Auth.user.uid===p.ownerUid) ? `<button class="btn signal" data-act="reqQuote" data-id="${esc(p.id)}">Request a quote</button>` : ""}
+        <a class="btn" href="${tel(p.phone)}">Call ${esc(fmtPhone(p.phone))}</a>
+        <a class="btn ghost" href="${wa(waNo,"Hi, I found you on "+BRAND+". ")}" target="_blank" rel="noopener">WhatsApp</a>
+        ${p.viber?`<a class="btn ghost" href="${viber(p.viber)}">Viber</a>`:""}
+        ${p.email?`<a class="btn ghost" href="mailto:${esc(p.email)}">Email</a>`:""}
+      </div>
+      ${p.about?`<h3>About</h3><p>${esc(p.about)}</p>`:""}
+      <h3>Services</h3><div class="tags">${(p.categories||[]).map(c=>`<span class="tag">${esc(CAT[c]||c)}</span>`).join("")}</div>
+      ${(p.brands||[]).length?`<h3>Brands</h3><p>${(p.brands).map(esc).join(", ")}</p>`:""}
+      <h3>Details</h3>
+      <dl class="kv">
+        <dt>Covers</dt><dd>${esc(coverageText(p))}</dd>
+        ${p.hours?`<dt>Hours</dt><dd>${esc(p.hours)}</dd>`:""}
+        ${p.address?`<dt>Address</dt><dd>${esc(p.address)}</dd>`:""}
+        ${p.years?`<dt>Experience</dt><dd>${esc(p.years)} years</dd>`:""}
+        ${p.certs?`<dt>Certifications</dt><dd>${esc(p.certs)}</dd>`:""}
+        ${p.regNo?`<dt>Registration</dt><dd>${esc(p.regNo)}</dd>`:""}
+      </dl>
+      <h3>Reviews</h3>
+      <p>${ratingHTML(p)}</p>
+      ${reviews.map(r=>`<div class="review"><b>${esc(r.name)}</b> <span class="rating"><span class="star">${"★".repeat(r.rating)}</span></span><p>${esc(r.text)}</p><small>${ago(r.date)}</small></div>`).join("")}
+      <form id="revForm" class="panel" style="margin-top:16px;background:var(--surface-2)">
+        <span class="f">Worked with ${esc(p.name)}? Leave a review</span>
+        <div class="starpick" role="radiogroup" aria-label="Rating">
+          ${[5,4,3,2,1].map(n=>`<input type="radio" name="stars" id="s${n}" value="${n}"><label for="s${n}" title="${n} star${n>1?"s":""}">★</label>`).join("")}
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div class="field"><label class="f" for="revName">Your name</label><input class="input" id="revName" maxlength="40"></div>
+        </div>
+        <div class="field"><label class="f" for="revText">What was the job, and how did it go?</label><textarea class="input" id="revText" maxlength="400"></textarea></div>
+        <p class="err" id="revErr" role="alert"></p>
+        <button class="btn">Post review</button>
+      </form>
+    </div>`;
+  $("#revForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const rating = +($("#revForm input[name=stars]:checked")?.value||0), name=$("#revName").value.trim(), text=$("#revText").value.trim();
+    if(!rating) return $("#revErr").textContent="Pick a star rating.";
+    if(!name || text.length<5) return $("#revErr").textContent="Add your name and a short description of the job.";
+    const reviews = [...(p.reviews||[]), {name,rating,text,date:Date.now()}];
+    try { await Store.update("providers", p.id, {reviews}); p.reviews = reviews; toast("Review posted"); renderDir(); openProvider(p.id); }
+    catch(err){ $("#revErr").textContent = "Couldn’t save the review: "+err.message; }
+  });
+  if(!d.open) d.showModal();
+  d.scrollTop = 0;
+}
+$$("dialog").forEach(d => {
+  d.addEventListener("click", e => { if((e.target===d && d.id!=="docDlg") || e.target.closest("[data-close]")) d.close(); });
+});
+
+/* ============ REQUEST BOARD ============ */
+function setupJobs(){
+  $("#jAtoll").innerHTML = opts(ATOLLS,"All atolls");
+  $("#jCat").innerHTML = opts(CATS,"All services");
+  $("#jC").innerHTML = opts(CATS,"Choose a service");
+  $("#jB").innerHTML = opts(BOATS,"Choose boat type");
+  $("#jA").innerHTML = opts(ATOLLS,"Choose atoll");
+  $("#jAtoll").onchange = renderJobs; $("#jCat").onchange = renderJobs;
+  $("#postJobBtn").onclick = () => openJobDlg({type:"board"});
+  $("#jobForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const job = {title:$("#jT").value.trim(),category:$("#jC").value,boatType:$("#jB").value,engine:$("#jE").value.trim(),
+      description:$("#jD").value.trim(),atoll:$("#jA").value,island:$("#jI").value.trim(),
+      urgency:$("#jobForm input[name=urg]:checked").value,name:$("#jN").value.trim(),phone:digits($("#jP").value),status:"open",createdAt:Date.now()};
+    const miss = [];
+    if(job.title.length<5) miss.push("the problem"); if(!job.category) miss.push("a service"); if(!job.boatType) miss.push("boat type");
+    if(!job.atoll) miss.push("atoll"); if(!job.island) miss.push("island"); if(!job.name) miss.push("your name");
+    if(miss.length) return $("#jobErr").textContent = "Add "+miss.join(", ")+".";
+    if(!validPhone(job.phone)) return $("#jobErr").textContent = "Enter a 7-digit Maldivian phone number.";
+    try {
+      if(jobMode.type==="board"){ const n = await Store.add("jobs", job); state.jobs.push(n); $("#jobForm").reset(); $("#jobDlg").close(); toast("Request posted"); renderJobs(); return; }
+      const prov = jobMode.type==="direct" ? state.providers.find(x=>x.id===jobMode.providerId) : myListing();
+      const rec = await Store.add("cases", {providerId:prov.id, ownerUid:prov.ownerUid, source:jobMode.type, jobId:null, title:job.title, category:job.category, boatType:job.boatType,
+        engine:job.engine, description:job.description, atoll:job.atoll, island:job.island, urgency:job.urgency, customer:{name:job.name, phone:job.phone}, closed:false, docIds:[], createdAt:Date.now()});
+      $("#jobForm").reset(); $("#jobDlg").close();
+      if(jobMode.type==="manual"){ state.ws.cases.push(rec); state.ws.tab="requests"; renderWs(); openCase(rec.id); toast("Job added"); }
+      else showRequestSent(rec, prov);
+    }
+    catch(err){ $("#jobErr").textContent = "Couldn’t post the request: "+err.message; }
+  });
+}
+const URG = {emergency:["Emergency","alarm"],week:["This week","warn"],flexible:["Flexible",""]};
+function renderJobs(){
+  const a=$("#jAtoll").value, c=$("#jCat").value;
+  const list = state.jobs.filter(j=>j.status==="open" && (!a||j.atoll===a) && (!c||j.category===c))
+    .sort((x,y)=>(y.urgency==="emergency")-(x.urgency==="emergency") || y.createdAt-x.createdAt);
+  if(!list.length){ $("#jobList").innerHTML = `<div class="empty"><h3>No open requests here</h3><p>Need something fixed? Post the first one.</p><button class="btn" onclick="$('#postJobBtn').click()">Post a request</button></div>`; return; }
+  $("#jobList").innerHTML = list.map(j => {
+    const [ul, uc] = URG[j.urgency]||URG.flexible;
+    return `<article class="job urg-${esc(j.urgency)}">
+      <div>
+        <h3>${esc(j.title)}</h3>
+        <p class="meta"><span>${esc(CAT[j.category]||"")}</span><span>${esc(j.boatType)}</span><span>${esc(j.island)}, ${esc(j.atoll)}</span><span>${ago(j.createdAt)}</span></p>
+        ${j.engine?`<p class="desc"><b>Engine or equipment:</b> ${esc(j.engine)}</p>`:""}
+        ${j.description?`<p class="desc">${esc(j.description)}</p>`:""}
+      </div>
+      <div class="job-side">
+        <span class="badge ${uc}">${ul}</span>
+        <small style="color:var(--muted)">Posted by ${esc(j.name)}</small>
+        <div class="row-actions">${canQuote()?`<button class="btn small signal" data-act="sendQuote" data-id="${esc(j.id)}">Send a quote</button>`:""}<a class="btn small" href="${tel(j.phone)}">Call</a><a class="btn small ghost" target="_blank" rel="noopener" href="${wa(j.phone,"Hi, I saw your request on "+BRAND+": "+j.title)}">WhatsApp</a></div>
+      </div></article>`;
+  }).join("");
+}
+
+/* ============ BUSINESS AREA: sign in, register, my listing ============ */
+let step = 0, editingId = null, authMode = "signin";
+function renderBiz(){
+  const u = Auth.user, mine = myListing();
+  $("#authBox").hidden = !!u;
+  $("#wsBox").hidden = !(u && mine && !editingId);
+  $("#regBox").hidden = !(u && (!mine || editingId));
+  if(!u){
+    $("#bizTitle").textContent = "List your marine business";
+    $("#bizLede").textContent = "Freelance engineers, workshops, parts shops and marine companies can list for free. Create an account to register, then sign in any time to update your listing.";
+    $("#demoHint").hidden = Auth.cloud; paintAuth(); return;
+  }
+  if(mine && !editingId){
+    $("#bizTitle").textContent = "Workspace"; $("#bizLede").textContent = "Handle requests, send quotations and invoices, and check payment slips.";
+    renderWs(); loadWs().then(renderWs).catch(e=>toast("Couldn’t load your workspace: "+e.message)); return;
+  }
+  if(editingId){ $("#bizTitle").textContent = "Edit listing"; $("#bizLede").textContent = "Changes show on the public directory as soon as you save."; }
+  else { $("#bizTitle").textContent = "Register your business"; $("#bizLede").textContent = "Every listing is checked by an admin before it goes live."; }
+  if(!$("#regDone").hidden) return;
+  $("#regCancel").hidden = !editingId;
+  paintStep();
+}
+function paintAuth(){
+  const up = authMode==="signup";
+  $$("#authBox [data-auth]").forEach(b => b.setAttribute("aria-selected", b.dataset.auth===authMode));
+  $("#aPass2Wrap").hidden = !up; $("#forgotBtn").parentElement.hidden = up;
+  $("#authSubmit").textContent = up ? "Create account" : "Sign in";
+  $("#authIntro").textContent = up ? "Create an account for your business. You’ll register your listing next." : "Sign in to manage your listing.";
+  $("#aPass").autocomplete = up ? "new-password" : "current-password";
+  $("#authErr").textContent = "";
+}
+function setupAuth(){
+  $$("#authBox [data-auth]").forEach(b => b.onclick = () => { authMode = b.dataset.auth; paintAuth(); });
+  $("#authForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = $("#aEmail").value.trim(), pw = $("#aPass").value, err = $("#authErr");
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return err.textContent = "Enter a valid email address.";
+    if(authMode==="signup"){
+      if(pw.length<8) return err.textContent = "Use a password of at least 8 characters.";
+      if(pw !== $("#aPass2").value) return err.textContent = "The passwords don’t match.";
+    } else if(!pw) return err.textContent = "Enter your password.";
+    const btn = $("#authSubmit"); btn.disabled = true;
+    try {
+      authMode==="signup" ? await Auth.signUp(email,pw) : await Auth.signIn(email,pw);
+      $("#authForm").reset(); await refresh(); updateAcctBtn();
+      toast(authMode==="signup" ? "Account created" : "Signed in");
+      if(isAdminUser() && location.hash==="#admin") renderAdmin(); else show("register");
+    } catch(x){ err.textContent = x.message; }
+    btn.disabled = false;
+  });
+  $("#forgotBtn").onclick = async () => {
+    const email = $("#aEmail").value.trim();
+    if(!email) return $("#authErr").textContent = "Enter your email above first.";
+    try { toast(await Auth.reset(email)); } catch(x){ $("#authErr").textContent = x.message; }
+  };
+  $("#signOutBtn").onclick = async () => { await Auth.signOut(); editingId = null; state.ws = {cases:[],docs:[],tab:"requests",loaded:false}; state.admin = false; authMode = "signin"; updateAcctBtn(); toast("Signed out"); renderBiz(); };
+  $("#editBtn").onclick = () => { const m = myListing(); if(!m) return; editingId = m.id; fillForm(m); step = 0; renderBiz(); window.scrollTo(0,0); };
+  $("#viewPublicBtn").onclick = () => { const m = myListing(); if(m) openProvider(m.id); };
+  $("#pauseBtn").onclick = async () => {
+    const m = myListing(); if(!m) return;
+    const paused = !m.paused;
+    try { await Store.update("providers", m.id, {paused}); m.paused = paused; toast(paused ? "Listing hidden from the directory" : "Listing visible again"); renderDash(m); renderDir(); }
+    catch(x){ toast("Couldn’t update: "+x.message); }
+  };
+  $("#regCancel").onclick = () => { editingId = null; resetRegForm(); renderBiz(); };
+  $("#toDash").onclick = () => { state.ws.tab = "listing"; $("#regDone").hidden = true; $("#regForm").hidden = false; resetRegForm(); renderBiz(); window.scrollTo(0,0); };
+}
+function renderDash(p){
+  const st = p.status==="approved" ? (p.paused ? ["pending","Hidden","Your listing is approved but hidden from the directory. Show it again when you’re ready."] : ["live","Live","Boat owners can find and contact you."])
+    : p.status==="rejected" ? ["rejected","Not approved","An admin couldn’t approve this listing. Check your details, edit, and it will go back for review."]
+    : ["pending","Waiting for approval","An admin will check your details. Your listing goes live once approved."];
+  $("#dashStatus").className = "status "+st[0];
+  $("#dashStatus").innerHTML = `<b>${st[1]}</b><span>${st[2]}</span>${p.verified?' <span class="badge ok" style="margin-left:6px">Verified</span>':""}`;
+  $("#dashName").textContent = p.name;
+  $("#dashSummary").innerHTML = summaryHTML({...p, coverage:p.coverage||[], categories:p.categories||[], brands:p.brands||[]});
+  const rv = (p.reviews||[]).slice().sort((a,b)=>b.date-a.date);
+  $("#dashReviews").innerHTML = rv.length ? `<p>${ratingHTML(p)}</p>` + rv.map(r=>`<div class="review"><b>${esc(r.name)}</b> <span class="rating"><span class="star">${"★".repeat(r.rating)}</span></span><p>${esc(r.text)}</p><small>${ago(r.date)}</small></div>`).join("")
+    : `<p style="color:var(--muted)">No reviews yet. Ask happy customers to review you from your public listing.</p>`;
+  $("#dashEmail").textContent = Auth.user.email;
+  $("#viewPublicBtn").hidden = p.status!=="approved";
+  $("#pauseBtn").hidden = p.status!=="approved";
+  $("#pauseBtn").textContent = p.paused ? "Show in directory" : "Hide from directory";
+}
+function fillForm(p){
+  resetRegForm();
+  const r = $(`#regForm input[name=ptype][value="${p.type}"]`); if(r) r.checked = true;
+  const set = (id,v) => $("#"+id).value = v ?? "";
+  set("rName",p.name); set("rOwner",p.owner); set("rRegNo",p.regNo); set("rYears",p.years||""); set("rAbout",p.about);
+  set("rCerts",p.certs); set("rHours",p.hours); set("rAtoll",p.atoll); set("rIsland",p.island); set("rAddress",p.address);
+  set("rPhone",p.phone); set("rWhatsapp",p.whatsapp); set("rViber",p.viber); set("rEmail",p.email);
+  $("#rMobile").checked = !!p.mobileService; $("#rEmergency").checked = !!p.emergency;
+  $$("#rCats input").forEach(i => i.checked = (p.categories||[]).includes(i.value));
+  $$("#rBrands input").forEach(i => i.checked = (p.brands||[]).includes(i.value));
+  const all = (p.coverage||[]).includes("ALL"); $("#rAll").checked = all;
+  $$("#rCoverage input").forEach(i => { i.checked = !all && (p.coverage||[]).includes(i.value); i.disabled = all; });
+  $("#rAgree").checked = true;
+}
+function resetRegForm(){ $("#regForm").reset(); $$("#rCoverage input").forEach(i=>i.disabled=false); step = 0; }
+
+function setupRegister(){
+  $("#typePick").innerHTML = Object.entries(TYPES).map(([k,[t,d]],i)=>`<label><input type="radio" name="ptype" value="${k}"${i===0?" checked":""}><b>${t}</b><span>${d}</span></label>`).join("");
+  $("#rCats").innerHTML = CATS.map(([k,v])=>`<label class="check"><input type="checkbox" value="${k}"> ${esc(v)}</label>`).join("");
+  $("#rBrands").innerHTML = BRANDS.map(b=>`<label class="check"><input type="checkbox" value="${esc(b)}"> ${esc(b)}</label>`).join("");
+  $("#rAtoll").innerHTML = opts(ATOLLS,"Choose atoll");
+  $("#rCoverage").innerHTML = ATOLLS.map(a=>`<label class="check"><input type="checkbox" value="${esc(a)}"> ${esc(a)}</label>`).join("");
+  $("#rAll").onchange = e => $$("#rCoverage input").forEach(i => { i.disabled = e.target.checked; });
+  $("#regNext").onclick = nextStep;
+  $("#regBack").onclick = () => { if(step>0){ step--; paintStep(); } };
+  paintStep();
+}
+function paintStep(){
+  $$("#regForm fieldset").forEach(f => f.hidden = +f.dataset.step !== step);
+  $$("#steps li").forEach((li,i) => { li.className = i===step ? "on" : i<step ? "done" : ""; if(i===step) li.setAttribute("aria-current","step"); else li.removeAttribute("aria-current"); });
+  $("#regBack").style.visibility = step ? "visible" : "hidden";
+  $("#regNext").textContent = step===3 ? (editingId ? "Save changes" : "Submit for review") : "Continue";
+  $("#regErr").textContent = "";
+  if(step===3) $("#regSummary").innerHTML = summaryHTML(collect());
+}
+function collect(){
+  const all = $("#rAll").checked;
+  return {
+    type: $("#regForm input[name=ptype]:checked")?.value || "engineer",
+    name: $("#rName").value.trim(), owner: $("#rOwner").value.trim(), regNo: $("#rRegNo").value.trim(),
+    years: +$("#rYears").value || 0, about: $("#rAbout").value.trim(),
+    categories: $$("#rCats input:checked").map(i=>i.value), brands: $$("#rBrands input:checked").map(i=>i.value),
+    certs: $("#rCerts").value.trim(), hours: $("#rHours").value.trim(),
+    mobileService: $("#rMobile").checked, emergency: $("#rEmergency").checked,
+    atoll: $("#rAtoll").value, island: $("#rIsland").value.trim(), address: $("#rAddress").value.trim(),
+    coverage: all ? ["ALL"] : $$("#rCoverage input:checked").map(i=>i.value),
+    phone: digits($("#rPhone").value), whatsapp: digits($("#rWhatsapp").value), viber: digits($("#rViber").value), email: $("#rEmail").value.trim()
+  };
+}
+function validate(d){
+  if(step===0){ if(d.name.length<3) return "Enter your business or full name."; }
+  if(step===1){ if(!d.categories.length) return "Pick at least one service."; }
+  if(step===2){
+    if(!d.atoll) return "Choose your base atoll."; if(!d.island) return "Enter your island.";
+    if(!validPhone(d.phone)) return "Enter a 7-digit Maldivian phone number.";
+    if(d.whatsapp && !validPhone(d.whatsapp)) return "Check the WhatsApp number.";
+    if(d.viber && !validPhone(d.viber)) return "Check the Viber number.";
+    if(d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return "Check the email address.";
+  }
+  if(step===3){ if(!$("#rAgree").checked) return "Tick the confirmation box to continue."; }
+  return "";
+}
+async function nextStep(){
+  const d = collect(), err = validate(d);
+  if(err){ $("#regErr").textContent = err; return; }
+  if(step<3){ step++; paintStep(); window.scrollTo(0,0); return; }
+  if(!Auth.user){ renderBiz(); return; }
+  const btn = $("#regNext"); btn.disabled = true;
+  try {
+    if(editingId){
+      const cur = state.providers.find(p=>p.id===editingId);
+      const patch = {...d, updatedAt:Date.now()};
+      if(cur && cur.status==="rejected") patch.status = "pending";   // resubmit after rejection
+      await Store.update("providers", editingId, patch);
+      Object.assign(cur, patch); editingId = null; resetRegForm();
+      toast(patch.status==="pending" ? "Changes saved and sent for review" : "Changes saved");
+      renderDir(); renderBiz(); window.scrollTo(0,0);
+    } else {
+      if(myListing()){ $("#regErr").textContent = "This account already has a listing."; btn.disabled=false; return; }
+      const rec = await Store.add("providers", {...d, ownerUid:Auth.user.uid, ownerEmail:Auth.user.email, status:"pending", verified:false, paused:false, reviews:[], createdAt:Date.now()});
+      state.providers.push(rec);
+      $("#regRef").textContent = rec.id.toUpperCase();
+      $("#regForm").hidden = true; $("#regDone").hidden = false;
+      $$("#steps li").forEach(li=>li.className="done");
+      updateAcctBtn();
+    }
+  } catch(e){ $("#regErr").textContent = "Couldn’t save: "+e.message; }
+  btn.disabled = false;
+}
+function summaryHTML(d){
+  const row = (k,v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : "";
+  return `<dl>${row("Type",TYPES[d.type]?.[0])}${row("Name",d.name)}${row("Contact person",d.owner)}${row("Registration",d.regNo)}${row("Experience",d.years?d.years+" years":"")}
+    ${row("Services",d.categories.map(c=>CAT[c]).join(", "))}${row("Brands",d.brands.join(", "))}${row("Certifications",d.certs)}${row("Hours",d.hours)}
+    ${row("Comes to the boat",d.mobileService?"Yes":"No")}${row("24/7 callouts",d.emergency?"Yes":"No")}
+    ${row("Based in",d.island+", "+d.atoll)}${row("Covers",d.coverage.includes("ALL")?"Whole country":[d.atoll,...d.coverage].filter((v,i,a)=>a.indexOf(v)===i).join(", "))}
+    ${row("Phone",fmtPhone(d.phone))}${row("WhatsApp",d.whatsapp&&fmtPhone(d.whatsapp))}${row("Viber",d.viber&&fmtPhone(d.viber))}${row("Email",d.email)}${row("About",d.about)}</dl>`;
+}
+
+/* ============ BILLING HELPERS ============ */
+const today = () => new Date().toISOString().slice(0,10);
+const addDays = n => new Date(Date.now()+n*day).toISOString().slice(0,10);
+const fmtDate = s => s ? new Date(s.length===10 ? s+"T00:00" : s).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "";
+const money = (n,c) => (c||"MVR")+" "+(+n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pad = n => String(n).padStart(4,"0");
+const caseLink = id => location.href.split("#")[0] + "#c=" + encodeURIComponent(id);
+const badge = ([t,c]) => `<span class="badge ${c||""}">${esc(t)}</span>`;
+const kvRow = (k,v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : "";
+const METHOD = {transfer:"Bank transfer",cash:"Cash",card:"Card",other:"Other"};
+const PAY_ST = {pending:["Slip to check","warn"],confirmed:["Confirmed","ok"],rejected:["Not accepted","alarm"]};
+const canQuote = () => { const m = myListing(); return !!(Auth.user && m && m.status==="approved"); };
+async function copyText(t, msg="Link copied"){ try { await navigator.clipboard.writeText(t); toast(msg); } catch { prompt("Copy this:", t); } }
+function settingsOf(p){
+  return {docName:p?.name||"", address:p?.address||"", tin:"", quotePrefix:"QT-", invoicePrefix:"INV-", nextQuote:1, nextInvoice:1,
+    taxRate:8, taxLabel:"GST", currency:"MVR", validDays:14, dueDays:7, terms:"", banks:[], ...(p?.settings||{})};
+}
+function totals(d){
+  const sub = (d.items||[]).reduce((a,i)=>a+(+i.q||0)*(+i.p||0),0);
+  const disc = Math.min(+d.discount||0, sub), tax = (sub-disc)*(+d.taxRate||0)/100;
+  return {sub, disc, tax, total: Math.round((sub-disc+tax)*100)/100};
+}
+const paidOf = d => (d.payments||[]).filter(x=>x.status==="confirmed").reduce((a,x)=>a+(+x.amount||0),0);
+function docStatus(d){
+  if(d.kind==="quote"){
+    if(d.invoiceId) return ["Invoiced","ok"];
+    return ({draft:["Draft",""],sent:["Sent","warn"],accepted:["Accepted","ok"],declined:["Declined","alarm"]})[d.status] || ["Draft",""];
+  }
+  if(d.status==="cancelled") return ["Cancelled",""];
+  if(d.status==="draft") return ["Draft",""];
+  const t = totals(d).total, p = paidOf(d);
+  if(p >= t-0.005) return ["Paid","ok"];
+  if((d.payments||[]).some(x=>x.status==="pending")) return ["Slip to check","warn"];
+  if(p > 0) return ["Part paid","warn"];
+  if(d.dueDate && d.dueDate < today()) return ["Overdue","alarm"];
+  return ["Unpaid",""];
+}
+function caseStatus(c, docs){
+  if(c.closed) return ["Closed",""];
+  const ds = docs.filter(d=>d.caseId===c.id && d.status!=="cancelled" && d.status!=="draft");
+  const inv = ds.filter(d=>d.kind==="invoice");
+  if(inv.length){
+    const st = inv.map(d=>docStatus(d)[0]);
+    if(st.every(x=>x==="Paid")) return ["Paid","ok"];
+    if(st.includes("Slip to check")) return ["Slip to check","warn"];
+    return ["Invoiced",""];
+  }
+  const q = ds.filter(d=>d.kind==="quote");
+  if(q.some(d=>d.status==="accepted")) return ["Accepted","ok"];
+  if(q.some(d=>d.status==="sent")) return ["Quoted",""];
+  if(q.some(d=>d.status==="declined")) return ["Declined","alarm"];
+  return ["New","warn"];
+}
+const sendMsg = (d,p) => `Hello ${d.customer?.name||""}, here is ${d.kind==="quote"?"quotation":"invoice"} ${d.number} from ${p.name} for ${money(totals(d).total,d.currency)}. ${d.kind==="quote"?"View and accept it here":"View it and send your payment slip here"}: ${caseLink(d.caseId)}`;
+
+/* ============ WORKSPACE ============ */
+state.ws = {cases:[], docs:[], tab:"requests", loaded:false};
+const WS_LABEL = {requests:"Requests",quotes:"Quotations",invoices:"Invoices",payments:"Payments",listing:"My listing",settings:"Billing settings"};
+async function loadWs(){
+  if(!Auth.user) return;
+  const id = Auth.user.uid;
+  [state.ws.cases, state.ws.docs] = await Promise.all([Store.query("cases","ownerUid",id), Store.query("docs","ownerUid",id)]);
+  state.ws.loaded = true;
+}
+const wsCase = id => state.ws.cases.find(c=>c.id===id);
+const wsDoc = id => state.ws.docs.find(d=>d.id===id);
+
+function renderWs(){
+  const p = myListing(); if(!p || $("#wsBox").hidden) return;
+  const {tab, cases, docs} = state.ws;
+  const newN = cases.filter(c=>caseStatus(c,docs)[0]==="New").length;
+  const slipN = docs.reduce((a,d)=>a+(d.payments||[]).filter(x=>x.status==="pending").length,0);
+  $$("#wsTabs button").forEach(b => {
+    const k = b.dataset.ws, n = k==="requests" ? newN : k==="payments" ? slipN : 0;
+    b.setAttribute("aria-selected", k===tab);
+    b.innerHTML = esc(WS_LABEL[k]) + (n ? `<span class="count">${n}</span>` : "");
+  });
+  $("#dashBox").hidden = tab!=="listing"; $("#wsPanel").hidden = tab==="listing";
+  if(tab==="listing") return renderDash(p);
+  const P = $("#wsPanel");
+  if(tab==="requests") P.innerHTML = wsRequests(p);
+  if(tab==="quotes") P.innerHTML = wsDocs("quote");
+  if(tab==="invoices") P.innerHTML = wsDocs("invoice");
+  if(tab==="payments") P.innerHTML = wsPayments();
+  if(tab==="settings"){ P.innerHTML = wsSettings(p); bindSettings(p); }
+}
+function wsRequests(p){
+  const {cases, docs} = state.ws;
+  const note = p.status!=="approved" ? `<div class="status pending"><b>Not live yet</b><span>Customers can send you requests once your listing is approved. You can still add jobs yourself and set up billing.</span></div>` : "";
+  const list = cases.slice().sort((a,b)=>(caseStatus(b,docs)[0]==="New")-(caseStatus(a,docs)[0]==="New") || (a.closed-b.closed) || b.createdAt-a.createdAt);
+  const SRC = {direct:"Sent to you", board:"From request board", manual:"Added by you"};
+  return note + `<div class="ws-bar"><h2>Requests</h2><div class="row-actions"><button class="btn ghost small" data-go="requests">Find jobs on the board</button><button class="btn small" data-act="manualJob">Add a job</button></div></div>` +
+    (list.length ? list.map(c => `<div class="item"><div>
+        <h3><button class="linklike" data-act="openCase" data-id="${esc(c.id)}">${esc(c.title)}</button></h3>
+        <p class="meta"><span>${esc(c.customer?.name)}</span>${c.boatType?`<span>${esc(c.boatType)}</span>`:""}${c.island?`<span>${esc(c.island)}</span>`:""}<span>${SRC[c.source]||""}</span><span>${ago(c.createdAt)}</span></p></div>
+        <div class="acts">${c.urgency==="emergency"&&!c.closed?'<span class="badge alarm">Emergency</span>':""}${badge(caseStatus(c,docs))}<button class="btn small ghost" data-act="openCase" data-id="${esc(c.id)}">Open</button></div></div>`).join("")
+    : `<div class="empty"><h3>No requests yet</h3><p>Requests customers send from your listing land here. You can also quote on jobs from the request board.</p><button class="btn" data-go="requests">Open the request board</button></div>`);
+}
+function wsDocs(kind){
+  const docs = state.ws.docs.filter(d=>d.kind===kind).sort((a,b)=>b.createdAt-a.createdAt);
+  const label = kind==="quote" ? "Quotations" : "Invoices";
+  const head = `<div class="ws-bar"><h2>${label}</h2><button class="btn small" data-act="newDoc" data-kind="${kind}">New ${kind==="quote"?"quotation":"invoice"}</button></div>`;
+  if(!docs.length) return head + `<div class="empty"><h3>No ${label.toLowerCase()} yet</h3><p>${kind==="quote"?"Open a request and create a quotation, or start one here.":"Turn an accepted quotation into an invoice, or start one here."}</p></div>`;
+  return head + docs.map(d => {
+    const t = totals(d), c = wsCase(d.caseId), bal = t.total - paidOf(d);
+    const showBal = kind==="invoice" && !["cancelled","draft"].includes(d.status) && bal>0.005 && paidOf(d)>0;
+    return `<div class="item"><div>
+      <h3><button class="linklike" data-act="viewDoc" data-id="${esc(d.id)}">${esc(d.number)}</button> <span style="font-weight:500;color:var(--muted)">${esc(d.customer?.name)}</span></h3>
+      <p class="meta"><span>${esc(c?.title||"")}</span><span>${fmtDate(d.issueDate)}</span>${showBal?`<span>Balance ${money(bal,d.currency)}</span>`:""}</p></div>
+      <div class="acts"><span class="amt">${money(t.total,d.currency)}</span>${badge(docStatus(d))}<button class="btn small ghost" data-act="viewDoc" data-id="${esc(d.id)}">View</button></div></div>`;
+  }).join("");
+}
+function wsPayments(){
+  const rows = [];
+  state.ws.docs.filter(d=>d.kind==="invoice").forEach(d=>(d.payments||[]).forEach(x=>rows.push({d,x})));
+  rows.sort((a,b)=>(b.x.status==="pending")-(a.x.status==="pending") || b.x.at-a.x.at);
+  const head = `<div class="ws-bar"><h2>Payments</h2></div>`;
+  if(!rows.length) return head + `<div class="empty"><h3>No payments yet</h3><p>When a customer sends a transfer slip for an invoice, it appears here for you to check against your bank account.</p></div>`;
+  return head + rows.map(({d,x}) => `<div class="item"><div>
+      <h3>${money(x.amount,d.currency)} <span style="font-weight:500;color:var(--muted)">for ${esc(d.number)}</span></h3>
+      <p class="meta"><span>${esc(x.payer||d.customer?.name)}</span><span>${METHOD[x.method]||"Bank transfer"}${x.by==="business"?", recorded by you":""}</span>${x.reference?`<span>Ref ${esc(x.reference)}</span>`:""}<span>${ago(x.at)}</span></p>
+      ${x.status==="rejected"&&x.reason?`<p class="hint">Reason: ${esc(x.reason)}</p>`:""}</div>
+      <div class="acts">${badge(PAY_ST[x.status]||PAY_ST.pending)}${x.slipId?`<button class="btn small ghost" data-act="slip" data-id="${esc(x.slipId)}">View slip</button>`:""}
+      ${x.status==="pending"?`<button class="btn small" data-act="payOk" data-doc="${esc(d.id)}" data-id="${esc(x.id)}">Confirm received</button><button class="btn small ghost" data-act="payNo" data-doc="${esc(d.id)}" data-id="${esc(x.id)}">Reject</button>`:""}</div></div>`).join("");
+}
+function bankRow(b={}){
+  return `<div class="bank-row">
+    <div><label class="f">Bank</label><input class="input" list="bankList" data-b="bank" value="${esc(b.bank)}"></div>
+    <div><label class="f">Account name</label><input class="input" data-b="name" value="${esc(b.name)}"></div>
+    <div><label class="f">Account number</label><input class="input" data-b="number" inputmode="numeric" value="${esc(b.number)}"></div>
+    <div><label class="f">Currency</label><select class="input" data-b="currency"><option${b.currency!=="USD"?" selected":""}>MVR</option><option${b.currency==="USD"?" selected":""}>USD</option></select></div>
+    <button type="button" class="btn ghost small" data-rmbank aria-label="Remove account" style="height:44px">✕</button></div>`;
+}
+function wsSettings(p){
+  const s = settingsOf(p);
+  return `<div class="ws-bar"><h2>Billing settings</h2></div><form class="panel" id="setForm" novalidate>
+    <h3 class="sub-h" style="margin-top:0">Shown on quotations and invoices</h3>
+    <div class="grid2">
+      <div class="field"><label class="f" for="stName">Business name on documents</label><input class="input" id="stName" value="${esc(s.docName)}"></div>
+      <div class="field"><label class="f" for="stTin">GST / TIN number <small>(optional)</small></label><input class="input" id="stTin" value="${esc(s.tin)}"></div>
+    </div>
+    <div class="field"><label class="f" for="stAddr">Address</label><input class="input" id="stAddr" value="${esc(s.address)}"></div>
+    <div class="grid3">
+      <div class="field"><label class="f" for="stQP">Quotation number prefix</label><input class="input" id="stQP" value="${esc(s.quotePrefix)}"><p class="hint">Next: ${esc(s.quotePrefix+pad(s.nextQuote))}</p></div>
+      <div class="field"><label class="f" for="stIP">Invoice number prefix</label><input class="input" id="stIP" value="${esc(s.invoicePrefix)}"><p class="hint">Next: ${esc(s.invoicePrefix+pad(s.nextInvoice))}</p></div>
+      <div class="field"><label class="f" for="stCur">Default currency</label><select class="input" id="stCur"><option${s.currency!=="USD"?" selected":""}>MVR</option><option${s.currency==="USD"?" selected":""}>USD</option></select></div>
+      <div class="field"><label class="f" for="stTL">Tax name</label><input class="input" id="stTL" value="${esc(s.taxLabel)}"></div>
+      <div class="field"><label class="f" for="stTR">Tax rate %</label><input class="input" id="stTR" type="number" step="0.01" min="0" value="${esc(s.taxRate)}"><p class="hint">Set 0 if you’re not GST registered.</p></div>
+      <div class="field"><label class="f" for="stVD">Quotation valid for (days)</label><input class="input" id="stVD" type="number" min="1" value="${esc(s.validDays)}"></div>
+      <div class="field"><label class="f" for="stDD">Invoice due in (days)</label><input class="input" id="stDD" type="number" min="0" value="${esc(s.dueDays)}"></div>
+    </div>
+    <div class="field"><label class="f" for="stTerms">Default notes and terms</label><textarea class="input" id="stTerms">${esc(s.terms)}</textarea></div>
+    <h3 class="sub-h">Bank accounts for transfers</h3>
+    <p class="hint" style="margin:-4px 0 12px">Customers see these on invoices and on their payment page.</p>
+    <div id="bankRows">${(s.banks.length ? s.banks : [{}]).map(bankRow).join("")}</div>
+    <button type="button" class="btn ghost small" id="addBank">Add another account</button>
+    <p class="err" id="setErr" role="alert"></p>
+    <div class="reg-nav"><span></span><button class="btn">Save settings</button></div>
+  </form>`;
+}
+function bindSettings(p){
+  $("#addBank").onclick = () => $("#bankRows").insertAdjacentHTML("beforeend", bankRow());
+  $("#bankRows").onclick = e => { if(e.target.closest("[data-rmbank]")) e.target.closest(".bank-row").remove(); };
+  $("#setForm").onsubmit = async e => {
+    e.preventDefault();
+    const banks = $$("#bankRows .bank-row").map(r => Object.fromEntries($$("[data-b]",r).map(i=>[i.dataset.b, i.value.trim()]))).filter(b=>b.bank||b.number||b.name);
+    const bad = banks.find(b=>!b.bank||!b.name||!/^[\d\s-]{6,24}$/.test(b.number));
+    if(bad) return $("#setErr").textContent = "Each bank account needs a bank, an account name and a valid account number.";
+    const cur = settingsOf(p);
+    const s = {...cur, docName:$("#stName").value.trim()||p.name, tin:$("#stTin").value.trim(), address:$("#stAddr").value.trim(),
+      quotePrefix:$("#stQP").value.trim()||"QT-", invoicePrefix:$("#stIP").value.trim()||"INV-", currency:$("#stCur").value,
+      taxLabel:$("#stTL").value.trim()||"Tax", taxRate:Math.max(0,+$("#stTR").value||0), validDays:Math.max(1,+$("#stVD").value||14),
+      dueDays:Math.max(0,+$("#stDD").value||0), terms:$("#stTerms").value.trim(), banks};
+    try { await Store.update("providers", p.id, {settings:s}); p.settings = s; toast("Settings saved"); renderWs(); }
+    catch(x){ $("#setErr").textContent = "Couldn’t save: "+x.message; }
+  };
+}
+
+/* ----- case (request) detail ----- */
+function openCase(id){
+  const c = wsCase(id); if(!c) return;
+  const p = myListing(), docs = state.ws.docs.filter(d=>d.caseId===id).sort((a,b)=>a.createdAt-b.createdAt);
+  const D = $("#caseDlg"), name = c.customer?.name||"";
+  D.innerHTML = `<div class="dlg-head"><div><h2>${esc(c.title)}</h2>
+      <p class="meta"><span>${esc(name)}</span>${c.island?`<span>${esc(c.island)}${c.atoll?", "+esc(c.atoll):""}</span>`:""}<span>${ago(c.createdAt)}</span></p>
+      <div class="badges" style="justify-content:flex-start;margin-top:10px">${badge(caseStatus(c,state.ws.docs))}${c.urgency==="emergency"?'<span class="badge alarm">Emergency</span>':""}</div></div>
+      <button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      <h3>Customer</h3>
+      <div class="contact"><a class="btn" href="${tel(c.customer?.phone)}">Call ${esc(fmtPhone(c.customer?.phone))}</a>
+        <a class="btn ghost" target="_blank" rel="noopener" href="${wa(c.customer?.phone, `Hi ${name}, this is ${p.name} about your request: ${c.title}`)}">WhatsApp</a></div>
+      <h3>Request</h3>
+      <dl class="kv">${kvRow("Service",CAT[c.category])}${kvRow("Boat",c.boatType)}${kvRow("Engine or equipment",c.engine)}${kvRow("Location",[c.island,c.atoll].filter(Boolean).join(", "))}${kvRow("Details",c.description)}</dl>
+      <h3>Customer page</h3>
+      <p class="hint" style="margin-bottom:8px">The customer uses this link to view your quotations, accept them and send payment slips.</p>
+      <div class="contact"><button class="btn ghost small" data-act="copyLink" data-id="${esc(c.id)}">Copy link</button>
+        <a class="btn ghost small" target="_blank" rel="noopener" href="${wa(c.customer?.phone, `Hi ${name}, you can follow your request with ${p.name} here: ${caseLink(c.id)}`)}">Send link on WhatsApp</a></div>
+      <h3>Quotations and invoices</h3>
+      ${docs.length ? docs.map(d=>`<div class="item"><div><h3 style="font-size:19px">${d.kind==="quote"?"Quotation":"Invoice"} ${esc(d.number)}</h3><p class="meta"><span>${fmtDate(d.issueDate)}</span></p></div>
+        <div class="acts"><span class="amt">${money(totals(d).total,d.currency)}</span>${badge(docStatus(d))}<button class="btn small ghost" data-act="viewDoc" data-id="${esc(d.id)}">View</button></div></div>`).join("")
+        : `<p style="color:var(--muted)">Nothing sent yet.</p>`}
+      <div class="contact" style="margin-top:14px">
+        <button class="btn" data-act="newDoc" data-kind="quote" data-case="${esc(c.id)}">Create quotation</button>
+        <button class="btn ghost" data-act="newDoc" data-kind="invoice" data-case="${esc(c.id)}">Create invoice</button>
+        <button class="btn ghost" data-act="${c.closed?"reopenCase":"closeCase"}" data-id="${esc(c.id)}">${c.closed?"Reopen job":"Close job"}</button>
+      </div>
+    </div>`;
+  if(!D.open) D.showModal();
+}
+
+/* ----- quotation / invoice editor ----- */
+let edit = null;
+function openEditor({kind, docId=null, caseId=null, fromQuote=null}){
+  const p = myListing(), s = settingsOf(p);
+  const src = docId ? wsDoc(docId) : fromQuote ? wsDoc(fromQuote) : null;
+  const c = caseId ? wsCase(caseId) : src ? wsCase(src.caseId) : null;
+  const d = docId ? structuredClone(src) : {
+    kind, currency: src?.currency || s.currency, items: src ? structuredClone(src.items) : [{d:"",q:1,p:0}],
+    discount: src?.discount || 0, taxRate: src?.taxRate ?? s.taxRate, taxLabel: src?.taxLabel || s.taxLabel,
+    notes: src ? src.notes : s.terms, issueDate: today(), validUntil: addDays(s.validDays), dueDate: addDays(s.dueDays),
+    customer: structuredClone(src?.customer || c?.customer || {name:"",phone:""})
+  };
+  edit = {kind, docId, caseId: c?.id || null, fromQuote, d};
+  const isQ = kind==="quote", D = $("#docDlg");
+  D.innerHTML = `<div class="dlg-head"><div><h2>${docId ? "Edit "+esc(d.number) : fromQuote ? "Invoice from "+esc(src.number) : "New "+(isQ?"quotation":"invoice")}</h2>
+      <p class="meta"><span>${esc(c?.title || "New job")}</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <form class="dlg-body" id="edForm" novalidate>
+      <div class="grid2">
+        <div class="field"><label class="f" for="edName">Customer name</label><input class="input" id="edName" value="${esc(d.customer.name)}"></div>
+        <div class="field"><label class="f" for="edPhone">Customer phone</label><input class="input" id="edPhone" inputmode="tel" value="${esc(d.customer.phone)}"></div>
+      </div>
+      ${c ? "" : `<div class="field"><label class="f" for="edTitle">Job</label><input class="input" id="edTitle" placeholder="e.g. Annual engine service, MV Example"></div>`}
+      <div class="grid3">
+        <div class="field"><label class="f" for="edIssue">Date</label><input class="input" id="edIssue" type="date" value="${esc(d.issueDate)}"></div>
+        <div class="field"><label class="f" for="edDue">${isQ?"Valid until":"Due date"}</label><input class="input" id="edDue" type="date" value="${esc(isQ?d.validUntil:d.dueDate)}"></div>
+        <div class="field"><label class="f" for="edCur">Currency</label><select class="input" id="edCur"><option${d.currency!=="USD"?" selected":""}>MVR</option><option${d.currency==="USD"?" selected":""}>USD</option></select></div>
+      </div>
+      <div class="scroll-x"><table class="lines"><thead><tr><th>Description</th><th class="num">Qty</th><th class="price">Unit price</th><th class="lt">Amount</th><th class="rm"></th></tr></thead><tbody id="edLines"></tbody></table></div>
+      <button type="button" class="btn ghost small" id="edAdd" style="margin-top:6px">Add line</button>
+      <div class="grid3" style="margin-top:18px">
+        <div class="field"><label class="f" for="edDisc">Discount (amount)</label><input class="input" id="edDisc" type="number" step="0.01" min="0" value="${esc(d.discount)}"></div>
+        <div class="field"><label class="f" for="edTL">Tax name</label><input class="input" id="edTL" value="${esc(d.taxLabel)}"></div>
+        <div class="field"><label class="f" for="edTax">Tax rate %</label><input class="input" id="edTax" type="number" step="0.01" min="0" value="${esc(d.taxRate)}"></div>
+      </div>
+      <div class="totals" id="edTotals"></div>
+      <div class="field" style="margin-top:16px"><label class="f" for="edNotes">Notes and terms</label><textarea class="input" id="edNotes">${esc(d.notes)}</textarea></div>
+      <p class="err" id="edErr" role="alert"></p>
+      <div class="reg-nav"><button type="button" class="btn ghost" data-close>Cancel</button><button class="btn" id="edSave">Save and preview</button></div>
+    </form>`;
+  paintLines();
+  $("#edAdd").onclick = () => { edit.d.items.push({d:"",q:1,p:0}); paintLines(); $$("#edLines [data-k=d]").pop()?.focus(); };
+  $("#edLines").oninput = e => { const i=e.target.dataset.i, k=e.target.dataset.k; if(i==null) return; edit.d.items[i][k] = k==="d" ? e.target.value : +e.target.value; paintTotals(); const lt=$(`#edLines tr[data-row="${i}"] .lt`); if(lt) lt.textContent = money((+edit.d.items[i].q||0)*(+edit.d.items[i].p||0), $("#edCur").value); };
+  $("#edLines").onclick = e => { const b=e.target.closest("[data-rm]"); if(!b) return; edit.d.items.splice(+b.dataset.rm,1); if(!edit.d.items.length) edit.d.items.push({d:"",q:1,p:0}); paintLines(); };
+  ["edDisc","edTax","edTL","edCur"].forEach(id => $("#"+id).addEventListener("input", paintTotals));
+  $("#edForm").onsubmit = e => { e.preventDefault(); saveEditor(); };
+  if(!D.open) D.showModal();
+}
+function paintLines(){
+  const cur = $("#edCur")?.value || edit.d.currency;
+  $("#edLines").innerHTML = edit.d.items.map((it,i)=>`<tr data-row="${i}">
+    <td><label class="sr" for="li${i}">Description</label><input class="input" id="li${i}" data-i="${i}" data-k="d" value="${esc(it.d)}" placeholder="Labour, part or service"></td>
+    <td class="num"><input class="input" type="number" step="any" min="0" data-i="${i}" data-k="q" value="${esc(it.q)}" aria-label="Quantity"></td>
+    <td class="price"><input class="input" type="number" step="0.01" min="0" data-i="${i}" data-k="p" value="${esc(it.p)}" aria-label="Unit price"></td>
+    <td class="lt">${money((+it.q||0)*(+it.p||0),cur)}</td>
+    <td class="rm"><button type="button" class="btn ghost small" data-rm="${i}" aria-label="Remove line">✕</button></td></tr>`).join("");
+  paintTotals();
+}
+function paintTotals(){
+  const d = {...edit.d, discount:+$("#edDisc").value||0, taxRate:+$("#edTax").value||0}, t = totals(d), cur = $("#edCur").value, tl = $("#edTL").value||"Tax";
+  $("#edTotals").innerHTML = `<span>Subtotal</span><span class="r">${money(t.sub,cur)}</span>${t.disc?`<span>Discount</span><span class="r">−${money(t.disc,cur)}</span>`:""}${d.taxRate?`<span>${esc(tl)} ${esc(d.taxRate)}%</span><span class="r">${money(t.tax,cur)}</span>`:""}<span class="g">Total</span><span class="g r">${money(t.total,cur)}</span>`;
+}
+async function saveEditor(){
+  const d = edit.d, err = $("#edErr"), isQ = edit.kind==="quote";
+  d.customer = {name:$("#edName").value.trim(), phone:digits($("#edPhone").value)};
+  d.issueDate = $("#edIssue").value || today();
+  if(isQ) d.validUntil = $("#edDue").value; else d.dueDate = $("#edDue").value;
+  d.currency = $("#edCur").value; d.discount = Math.max(0,+$("#edDisc").value||0); d.taxRate = Math.max(0,+$("#edTax").value||0);
+  d.taxLabel = $("#edTL").value.trim() || "Tax"; d.notes = $("#edNotes").value.trim();
+  d.items = d.items.map(i=>({d:(i.d||"").trim(), q:+i.q||0, p:+i.p||0})).filter(i=>i.d || i.p);
+  if(!d.customer.name) return err.textContent = "Add the customer’s name.";
+  if(!validPhone(d.customer.phone)) return err.textContent = "Enter the customer’s 7-digit phone number.";
+  if(!d.items.length || d.items.some(i=>!i.d)) { if(!d.items.length) d.items=[{d:"",q:1,p:0}]; paintLines(); return err.textContent = "Every line needs a description."; }
+  if(d.items.some(i=>i.q<=0)) return err.textContent = "Quantities must be more than zero.";
+  if(totals(d).total <= 0) return err.textContent = "The total must be more than zero.";
+  const btn = $("#edSave"); btn.disabled = true;
+  try {
+    const p = myListing();
+    if(!edit.caseId){
+      const title = ($("#edTitle")?.value.trim()) || d.items[0].d;
+      const nc = await Store.add("cases", {providerId:p.id, ownerUid:Auth.user.uid, source:"manual", jobId:null, title, category:"", boatType:"", engine:"", description:"",
+        atoll:"", island:"", urgency:"flexible", customer:{...d.customer}, closed:false, docIds:[], createdAt:Date.now()});
+      state.ws.cases.push(nc); edit.caseId = nc.id;
+    }
+    d.caseId = edit.caseId;
+    let id;
+    if(edit.docId){
+      const patch = {...d, updatedAt:Date.now()}; delete patch.id;
+      if(isQ && ["accepted","declined"].includes(patch.status)) patch.status = "sent";   // changed quote needs a fresh answer
+      await Store.update("docs", edit.docId, patch); Object.assign(wsDoc(edit.docId), patch); id = edit.docId;
+    } else {
+      const s = settingsOf(p), key = isQ ? "nextQuote" : "nextInvoice";
+      d.number = (isQ ? s.quotePrefix : s.invoicePrefix) + pad(s[key]);
+      s[key] = s[key] + 1;
+      await Store.update("providers", p.id, {settings:s}); p.settings = s;
+      Object.assign(d, {providerId:p.id, ownerUid:Auth.user.uid, status:"draft", payments:[], createdAt:Date.now()});
+      if(!isQ && edit.fromQuote) d.quoteId = edit.fromQuote;
+      const rec = await Store.add("docs", d); state.ws.docs.push(rec); id = rec.id;
+      const cs = wsCase(edit.caseId), docIds = [...(cs.docIds||[]), rec.id];
+      await Store.update("cases", cs.id, {docIds}); cs.docIds = docIds;
+      if(edit.fromQuote){ await Store.update("docs", edit.fromQuote, {invoiceId:rec.id}); wsDoc(edit.fromQuote).invoiceId = rec.id; }
+    }
+    $("#docDlg").close(); toast("Saved");
+    renderWs(); if($("#caseDlg").open) openCase(edit.caseId);
+    openDocView(id);
+  } catch(x){ err.textContent = "Couldn’t save: "+x.message; }
+  btn.disabled = false;
+}
+
+/* ----- printable document ----- */
+function sheetHTML(d, p, c){
+  const s = settingsOf(p), t = totals(d), inv = d.kind==="invoice", paid = inv ? paidOf(d) : 0, bal = t.total - paid, cur = d.currency;
+  return `<div class="sheet">
+    <div class="sh-top">
+      <div><h2>${esc(s.docName||p.name)}</h2><p>${s.address?esc(s.address)+"<br>":""}${esc(fmtPhone(p.phone))}${p.email?"<br>"+esc(p.email):""}${s.tin?"<br>TIN "+esc(s.tin):""}</p></div>
+      <div class="sh-title"><h1>${inv?"Invoice":"Quotation"}</h1><dl><dt>Number</dt><dd>${esc(d.number)}</dd><dt>Date</dt><dd>${fmtDate(d.issueDate)}</dd><dt>${inv?"Due":"Valid until"}</dt><dd>${fmtDate(inv?d.dueDate:d.validUntil)}</dd></dl></div>
+    </div>
+    <div class="sh-to">
+      <div><div class="lbl">${inv?"Bill to":"Prepared for"}</div><b>${esc(d.customer?.name)}</b><br>${esc(fmtPhone(d.customer?.phone))}</div>
+      ${c?`<div><div class="lbl">Job</div>${esc(c.title)}${c.boatType?"<br>"+esc(c.boatType):""}${c.engine?", "+esc(c.engine):""}</div>`:""}
+    </div>
+    <table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Unit price</th><th class="r">Amount</th></tr></thead>
+      <tbody>${(d.items||[]).map(i=>`<tr><td>${esc(i.d)}</td><td class="r">${esc(i.q)}</td><td class="r">${money(i.p,cur)}</td><td class="r">${money(i.q*i.p,cur)}</td></tr>`).join("")}</tbody></table>
+    <div class="sh-tot"><span>Subtotal</span><span class="r">${money(t.sub,cur)}</span>
+      ${t.disc?`<span>Discount</span><span class="r">−${money(t.disc,cur)}</span>`:""}
+      ${+d.taxRate?`<span>${esc(d.taxLabel||"Tax")} ${esc(d.taxRate)}%</span><span class="r">${money(t.tax,cur)}</span>`:""}
+      <span class="g">Total</span><span class="g r">${money(t.total,cur)}</span>
+      ${inv && paid ? `<span>Paid</span><span class="r">−${money(paid,cur)}</span><span class="g">Balance due</span><span class="g r">${money(Math.max(bal,0),cur)}</span>` : ""}
+    </div>
+    ${d.notes?`<div class="sh-notes"><div class="lbl">Notes and terms</div><p>${esc(d.notes).replace(/\n/g,"<br>")}</p></div>`:""}
+    ${inv && s.banks.length && bal>0.005 && d.status!=="cancelled" ? `<div class="sh-pay"><div class="lbl">Pay by bank transfer</div>${s.banks.map(b=>`<p><b>${esc(b.bank)}</b> (${esc(b.currency)})<br>${esc(b.name)}<br>Account ${esc(b.number)}</p>`).join("")}<p>Please use <b>${esc(d.number)}</b> as the transfer reference.</p></div>` : ""}
+    ${inv && d.status!=="cancelled" && d.status!=="draft" && bal<=0.005 ? `<div class="stamp">Paid</div>` : ""}${d.status==="cancelled" ? `<div class="stamp void">Cancelled</div>` : ""}
+    <p class="foot">${esc(s.docName||p.name)}${p.regNo?", registration "+esc(p.regNo):""}</p>
+  </div>`;
+}
+function openDocView(id, o={}){
+  const d = o.doc || wsDoc(id); if(!d) return;
+  const p = o.provider || myListing(), c = o.case || wsCase(d.caseId), t = totals(d), V = $("#viewDlg");
+  const owner = !o.customer, inv = d.kind==="invoice", paid = paidOf(d);
+  const acts = owner ? [
+    `<button class="btn small" data-act="printDoc">Print or save PDF</button>`,
+    d.status!=="cancelled" ? `<a class="btn small signal" data-act="sendDoc" data-id="${esc(d.id)}" target="_blank" rel="noopener" href="${wa(d.customer?.phone, sendMsg(d,p))}">Send on WhatsApp</a>` : "",
+    `<button class="btn small ghost" data-act="copyLink" data-id="${esc(d.caseId)}">Copy customer link</button>`,
+    (!inv && !d.invoiceId) || (inv && d.status!=="cancelled" && !(d.payments||[]).length) ? `<button class="btn small ghost" data-act="editDoc" data-id="${esc(d.id)}">Edit</button>` : "",
+    !inv && !d.invoiceId && d.status!=="declined" ? `<button class="btn small ghost" data-act="toInvoice" data-id="${esc(d.id)}">Create invoice from this</button>` : "",
+    inv && !["cancelled","draft"].includes(d.status) && t.total-paid>0.005 ? `<button class="btn small ghost" data-act="recordPay" data-id="${esc(d.id)}">Record a payment</button>` : "",
+    inv && d.status!=="cancelled" && d.status!=="draft" && !(d.payments||[]).some(x=>x.status!=="rejected") ? `<button class="btn small ghost" data-act="cancelInv" data-id="${esc(d.id)}">Cancel invoice</button>` : "",
+    d.status==="draft" ? `<button class="btn small ghost" data-act="delDoc" data-id="${esc(d.id)}">Delete draft</button>` : ""
+  ].join("") : `<button class="btn small" data-act="printDoc">Print or save PDF</button>`;
+  V.innerHTML = `<div class="dlg-head"><div><h2>${inv?"Invoice":"Quotation"} ${esc(d.number)}</h2><div class="badges" style="justify-content:flex-start;margin-top:8px">${badge(docStatus(d))}</div></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">${owner && d.status==="draft" ? `<p class="hint" style="margin-bottom:10px">Draft. The customer sees it once you send it.</p>` : ""}<div class="contact" style="margin-bottom:16px">${acts}</div><div id="sheetWrap">${sheetHTML(d,p,c)}</div></div>`;
+  if(!V.open) V.showModal();
+  V.scrollTop = 0;
+}
+function openRecordPay(id){
+  const d = wsDoc(id), bal = totals(d).total - paidOf(d), D = $("#payDlg");
+  D.innerHTML = `<div class="dlg-head"><div><h2>Record a payment</h2><p class="meta"><span>${esc(d.number)}</span><span>Balance ${money(bal,d.currency)}</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <form class="dlg-body" id="rpForm" novalidate>
+      <div class="grid2"><div class="field"><label class="f" for="rpAmt">Amount received</label><input class="input" id="rpAmt" type="number" step="0.01" min="0" value="${bal.toFixed(2)}"></div>
+      <div class="field"><label class="f" for="rpM">Method</label><select class="input" id="rpM">${Object.entries(METHOD).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></div></div>
+      <div class="field"><label class="f" for="rpRef">Reference <small>(optional)</small></label><input class="input" id="rpRef"></div>
+      <p class="err" id="rpErr" role="alert"></p>
+      <div class="reg-nav"><button type="button" class="btn ghost" data-close>Cancel</button><button class="btn">Save payment</button></div></form>`;
+  D.showModal();
+  $("#rpForm").onsubmit = async e => {
+    e.preventDefault(); const amount = +$("#rpAmt").value;
+    if(!(amount>0)) return $("#rpErr").textContent = "Enter the amount received.";
+    const payments = [...(d.payments||[]), {id:uid(), amount, method:$("#rpM").value, reference:$("#rpRef").value.trim(), payer:d.customer?.name||"", status:"confirmed", by:"business", at:Date.now()}];
+    try { await Store.update("docs", d.id, {payments}); d.payments = payments; D.close(); toast("Payment recorded"); renderWs(); openDocView(d.id); }
+    catch(x){ $("#rpErr").textContent = "Couldn’t save: "+x.message; }
+  };
+}
+async function openSlip(id){
+  let sl = null; try { sl = await Store.get("slips", id); } catch {}
+  if(!sl) return toast("That slip couldn’t be found.");
+  const D = $("#slipDlg"), isImg = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,/.test(sl.data||"");
+  let link = "";
+  if(sl.type==="application/pdf" || /^data:image\/(png|jpe?g);/.test(sl.data||"")){
+    try { const bin = atob(String(sl.data).split(",")[1]||""), u = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+      link = URL.createObjectURL(new Blob([u], {type: sl.type==="application/pdf" ? "application/pdf" : "image/jpeg"})); } catch {}
+  }
+  D.innerHTML = `<div class="dlg-head"><div><h2>Transfer slip</h2><p class="meta"><span>${esc(sl.name||"")}</span><span>${ago(sl.createdAt)}</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">${isImg ? `<img src="${esc(sl.data)}" alt="Transfer slip" style="max-width:100%;border:1px solid var(--line);border-radius:6px">`
+      : link ? `<iframe src="${link}" title="Transfer slip" style="width:100%;height:70vh;border:1px solid var(--line);border-radius:6px"></iframe>` : `<p>This slip can’t be shown.</p>`}
+      ${link ? `<p style="margin-top:10px"><a href="${link}" target="_blank" rel="noopener">Open full size</a></p>` : ""}
+      <p class="hint" style="margin-top:10px">Check the amount and reference against your bank account before confirming.</p></div>`;
+  D.showModal();
+}
+
+/* ----- after a customer sends a direct request ----- */
+function showRequestSent(c, p){
+  const link = caseLink(c.id), D = $("#linkDlg");
+  D.innerHTML = `<div class="dlg-head"><div><h2>Request sent</h2><p class="meta"><span>${esc(p.name)}</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      <p>${esc(p.name)} will see your request. Keep this link: it’s where you’ll see their quotation, accept it, and send your payment slip.</p>
+      <div class="linkbox"><input class="input" readonly value="${esc(link)}" aria-label="Your request link"><button class="btn ghost" data-act="copyRaw" data-v="${esc(link)}">Copy</button></div>
+      ${Auth.cloud ? "" : `<p class="hint">Demo mode: this link only works in this browser.</p>`}
+      <div class="contact" style="margin-top:14px"><a class="btn" href="#c=${encodeURIComponent(c.id)}">Open my request page</a>
+        <a class="btn ghost" target="_blank" rel="noopener" href="${wa(p.whatsapp||p.phone, `Hi, I’ve sent you a quote request on ${BRAND}: ${c.title}`)}">Let them know on WhatsApp</a></div>
+    </div>`;
+  D.showModal();
+}
+let jobMode = {type:"board"};
+function openJobDlg(mode){
+  jobMode = mode;
+  const p = mode.providerId ? state.providers.find(x=>x.id===mode.providerId) : null;
+  $("#jobTitle").textContent = mode.type==="direct" ? "Request a quote" : mode.type==="manual" ? "Add a job" : "Post a request";
+  $("#jobSub").textContent = mode.type==="direct" ? `Goes only to ${p?.name||"this business"}` : mode.type==="manual" ? "For a customer who called or walked in" : "Providers will contact you directly";
+  $("#jNL").textContent = mode.type==="manual" ? "Customer name" : "Your name";
+  $("#jPH").textContent = mode.type==="board" ? "Shown on the request board so providers can call you." : mode.type==="manual" ? "Used to send quotations and invoices on WhatsApp." : "Shared only with this business.";
+  $("#jobErr").textContent = ""; $("#jobDlg").showModal();
+}
+async function quoteFromJob(jobId){
+  if(!state.ws.loaded) await loadWs();
+  const j = state.jobs.find(x=>x.id===jobId), p = myListing(); if(!j || !p) return;
+  let c = state.ws.cases.find(x=>x.jobId===jobId);
+  if(!c){
+    c = await Store.add("cases", {providerId:p.id, ownerUid:Auth.user.uid, source:"board", jobId, title:j.title, category:j.category, boatType:j.boatType, engine:j.engine,
+      description:j.description, atoll:j.atoll, island:j.island, urgency:j.urgency, customer:{name:j.name, phone:j.phone}, closed:false, docIds:[], createdAt:Date.now()});
+    state.ws.cases.push(c);
+  }
+  openEditor({kind:"quote", caseId:c.id});
+}
+
+/* ============ CUSTOMER REQUEST PAGE ============ */
+let cust = null;
+async function renderCustomerCase(id){
+  $$(".view").forEach(v => v.hidden = v.id!=="view-case");
+  $$(".nav button").forEach(b => b.removeAttribute("aria-current"));
+  window.scrollTo(0,0);
+  const body = $("#cBody"); body.innerHTML = `<p style="color:var(--muted)">Loading your request…</p>`;
+  let c = null; try { c = await Store.get("cases", id); } catch {}
+  if(!c){ $("#cTitle").textContent = "Request not found"; $("#cLede").textContent = "Check the link you were sent, or ask the business to send it again."; $("#cContact").innerHTML = ""; body.innerHTML = ""; return; }
+  let p = state.providers.find(x=>x.id===c.providerId); if(!p){ try { p = await Store.get("providers", c.providerId); } catch {} }
+  const docs = (await Promise.all((c.docIds||[]).map(i=>Store.get("docs",i).catch(()=>null)))).filter(d=>d && d.status!=="draft");
+  cust = {c, p, docs};
+  $("#cTitle").textContent = c.title;
+  $("#cLede").textContent = `Your request with ${p?.name||"the business"}${c.closed?" (closed)":""}.`;
+  $("#cContact").innerHTML = p ? `<a class="btn signal" href="${tel(p.phone)}">Call ${esc(p.name)}</a><a class="btn on-dark" target="_blank" rel="noopener" href="${wa(p.whatsapp||p.phone, `Hi, about my request: ${c.title}`)}">WhatsApp</a>` : "";
+  body.innerHTML = docs.length ? docs.slice().reverse().map(d=>custDocHTML(d,p)).join("")
+    : `<div class="empty"><h3>No quotation yet</h3><p>${esc(p?.name||"The business")} will send a quotation to this page. Keep the link, or message them on WhatsApp.</p></div>`;
+}
+function custDocHTML(d, p){
+  const t = totals(d), inv = d.kind==="invoice", s = settingsOf(p);
+  let h = `<div class="panel cdoc"><div class="ws-bar"><div><h2>${inv?"Invoice":"Quotation"} ${esc(d.number)}</h2>
+      <p class="meta"><span>${fmtDate(d.issueDate)}</span><span>${inv?"Due "+fmtDate(d.dueDate):"Valid until "+fmtDate(d.validUntil)}</span></p></div>
+      <div style="display:flex;gap:10px;align-items:center"><span class="amt">${money(t.total,d.currency)}</span>${badge(docStatus(d))}</div></div>
+    <div class="contact"><button class="btn ghost small" data-act="custView" data-id="${esc(d.id)}">View ${inv?"invoice":"quotation"}</button>`;
+  if(!inv && d.status==="sent" && !d.invoiceId){
+    h += d.validUntil && d.validUntil < today() ? `<span class="hint">This quotation has expired. Ask ${esc(p?.name||"the business")} for an updated one.</span>`
+      : `<button class="btn small" data-act="custAccept" data-id="${esc(d.id)}">Accept quotation</button><button class="btn small ghost" data-act="custDecline" data-id="${esc(d.id)}">Decline</button>`;
+  }
+  if(!inv && d.status==="accepted" && !d.invoiceId) h += `<span class="hint">Accepted. ${esc(p?.name||"The business")} will send the invoice.</span>`;
+  h += `</div>`;
+  if(inv && d.status!=="cancelled"){
+    const pays = d.payments||[], bal = t.total - paidOf(d), pending = pays.some(x=>x.status==="pending");
+    const pendingAmt = pays.filter(x=>x.status==="pending").reduce((a,x)=>a+(+x.amount||0),0), toPay = Math.max(0, bal - pendingAmt);
+    if(pays.length) h += `<h3 class="sub-h">Payments</h3>` + pays.map(x=>`<p class="payline">${money(x.amount,d.currency)} <span class="hint">${ago(x.at)}</span> ${badge(x.status==="pending"?["Waiting for confirmation","warn"]:PAY_ST[x.status])}${x.status==="rejected"&&x.reason?` <span class="hint">${esc(x.reason)}</span>`:""}</p>`).join("");
+    if(bal > 0.005 && toPay <= 0.005) h += `<p class="paid-note">Your slip is with ${esc(p?.name||"the business")} to check. This page updates once they confirm it.</p>`;
+    else if(bal > 0.005){
+      h += `<h3 class="sub-h">Pay by bank transfer</h3>` + (s.banks.length ? s.banks.map(b=>`<div class="bank"><b>${esc(b.bank)}</b> <span class="hint">${esc(b.currency)}</span><br>${esc(b.name)}<br><code>${esc(b.number)}</code> <button type="button" class="btn ghost small" data-act="copyRaw" data-v="${esc(b.number)}" data-msg="Account number copied">Copy</button></div>`).join("")
+          : `<p class="hint">Ask ${esc(p?.name||"the business")} for their bank details.</p>`)
+        + `<p class="hint">Use <b>${esc(d.number)}</b> as the transfer reference.</p>
+        <form class="slipForm" data-id="${esc(d.id)}" novalidate>
+          <h3 class="sub-h">${pending ? "Send another slip" : "Transferred? Send your slip"}</h3>
+          <div class="grid3">
+            <div class="field"><label class="f" for="sa-${esc(d.id)}">Amount paid (${esc(d.currency)})</label><input class="input" id="sa-${esc(d.id)}" type="number" step="0.01" min="0" value="${toPay.toFixed(2)}"></div>
+            <div class="field"><label class="f" for="sr-${esc(d.id)}">Transfer reference <small>(optional)</small></label><input class="input" id="sr-${esc(d.id)}"></div>
+            <div class="field"><label class="f" for="sn-${esc(d.id)}">Paid by</label><input class="input" id="sn-${esc(d.id)}" value="${esc(d.customer?.name)}"></div>
+          </div>
+          <div class="field"><label class="f" for="sf-${esc(d.id)}">Transfer slip <small>(photo, screenshot or PDF)</small></label><input class="input" id="sf-${esc(d.id)}" type="file" accept="image/*,application/pdf"></div>
+          <p class="err" role="alert"></p><button class="btn">Send payment slip</button>
+        </form>`;
+    } else h += `<p class="paid-note">Paid in full. Thank you.</p>`;
+  }
+  return h + `</div>`;
+}
+function fileToDataURL(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error("Couldn’t read the file.")); r.readAsDataURL(f); }); }
+async function readSlip(file){
+  if(file.type==="application/pdf"){
+    if(file.size > 700*1024) throw new Error("That PDF is too large. Upload a screenshot or photo of the slip instead.");
+    return {data: await fileToDataURL(file), type:"application/pdf", name:file.name};
+  }
+  if(!file.type.startsWith("image/")) throw new Error("Upload a photo, screenshot or PDF of the slip.");
+  const url = URL.createObjectURL(file);
+  const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error("That image couldn’t be opened. Try a screenshot instead.")); i.src=url; });
+  const k = Math.min(1, 1400/Math.max(img.width, img.height)), cv = document.createElement("canvas");
+  cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+  const ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(img,0,0,cv.width,cv.height);
+  URL.revokeObjectURL(url);
+  let data = cv.toDataURL("image/jpeg", .72);
+  if(data.length > 900000) data = cv.toDataURL("image/jpeg", .5);
+  return {data, type:"image/jpeg", name:file.name};
+}
+$("#cBody").addEventListener("submit", async e => {
+  const f = e.target.closest(".slipForm"); if(!f) return; e.preventDefault();
+  const id = f.dataset.id, err = $(".err", f), btn = $("button.btn:not([type=button])", f);
+  const amount = +$("#sa-"+CSS.escape(id)).value, file = $("#sf-"+CSS.escape(id)).files[0];
+  if(!(amount>0)) return err.textContent = "Enter the amount you transferred.";
+  if(!file) return err.textContent = "Attach a photo or screenshot of the transfer slip.";
+  btn.disabled = true; btn.textContent = "Sending…"; err.textContent = "";
+  try {
+    const slip = await readSlip(file);
+    const sl = await Store.add("slips", {...slip, createdAt:Date.now()});
+    const d = await Store.get("docs", id);
+    const payments = [...(d.payments||[]), {id:uid(), amount, reference:$("#sr-"+CSS.escape(id)).value.trim(), payer:$("#sn-"+CSS.escape(id)).value.trim(), method:"transfer", slipId:sl.id, status:"pending", at:Date.now()}];
+    await Store.update("docs", id, {payments});
+    toast("Slip sent. You’ll see it confirmed here once the business checks the transfer.");
+    renderCustomerCase(cust.c.id);
+  } catch(x){ err.textContent = x.message; btn.disabled = false; btn.textContent = "Send payment slip"; }
+});
+
+/* ============ WORKSPACE ACTIONS (one click handler) ============ */
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-act]"); if(!t) return;
+  const {act, id} = t.dataset;
+  const ACT = {
+    openCase: () => openCase(id),
+    manualJob: () => openJobDlg({type:"manual"}),
+    newDoc: () => openEditor({kind:t.dataset.kind, caseId:t.dataset.case||null}),
+    viewDoc: () => openDocView(id),
+    editDoc: () => { $("#viewDlg").close(); const d = wsDoc(id); openEditor({kind:d.kind, docId:id}); },
+    toInvoice: () => { $("#viewDlg").close(); const q = wsDoc(id); openEditor({kind:"invoice", fromQuote:id, caseId:q.caseId}); },
+    printDoc: () => { $("#printRoot").innerHTML = $("#sheetWrap").innerHTML; window.print(); },
+    copyLink: () => copyText(caseLink(id)),
+    copyRaw: () => copyText(t.dataset.v, t.dataset.msg || "Copied"),
+    recordPay: () => openRecordPay(id),
+    slip: () => openSlip(id),
+    sendQuote: () => quoteFromJob(id),
+    reqQuote: () => { $("#provDlg").close(); openJobDlg({type:"direct", providerId:id}); },
+    sendDoc: async () => {           // the link itself opens WhatsApp; mark as sent
+      const d = wsDoc(id); if(!d || d.status!=="draft") return;
+      const status = d.kind==="quote" ? "sent" : "issued";
+      await Store.update("docs", id, {status, sentAt:Date.now()}); d.status = status; renderWs(); openDocView(id);
+    },
+    cancelInv: async () => { if(!confirm("Cancel this invoice? The customer will see it as cancelled.")) return; await Store.update("docs", id, {status:"cancelled"}); wsDoc(id).status = "cancelled"; toast("Invoice cancelled"); renderWs(); openDocView(id); },
+    delDoc: async () => {
+      if(!confirm("Delete this draft?")) return;
+      const d = wsDoc(id); await Store.remove("docs", id); state.ws.docs = state.ws.docs.filter(x=>x.id!==id);
+      const c = wsCase(d.caseId); if(c){ c.docIds = (c.docIds||[]).filter(x=>x!==id); await Store.update("cases", c.id, {docIds:c.docIds}); }
+      if(d.kind==="invoice" && d.quoteId && wsDoc(d.quoteId)){ await Store.update("docs", d.quoteId, {invoiceId:null}); wsDoc(d.quoteId).invoiceId = null; }
+      $("#viewDlg").close(); toast("Draft deleted"); renderWs(); if($("#caseDlg").open && c) openCase(c.id);
+    },
+    closeCase: async () => { await Store.update("cases", id, {closed:true}); wsCase(id).closed = true; renderWs(); openCase(id); },
+    reopenCase: async () => { await Store.update("cases", id, {closed:false}); wsCase(id).closed = false; renderWs(); openCase(id); },
+    payOk: async () => {
+      const d = wsDoc(t.dataset.doc), payments = d.payments.map(x => x.id===id ? {...x, status:"confirmed", reviewedAt:Date.now()} : x);
+      await Store.update("docs", d.id, {payments}); d.payments = payments; toast("Payment confirmed"); renderWs();
+    },
+    payNo: async () => {
+      const reason = prompt("Why isn’t this slip accepted? The customer will see this.", "Transfer not received yet"); if(reason===null) return;
+      const d = wsDoc(t.dataset.doc), payments = d.payments.map(x => x.id===id ? {...x, status:"rejected", reason, reviewedAt:Date.now()} : x);
+      await Store.update("docs", d.id, {payments}); d.payments = payments; toast("Slip marked as not accepted"); renderWs();
+    },
+    custView: () => { const d = cust.docs.find(x=>x.id===id); openDocView(id, {doc:d, provider:cust.p, case:cust.c, customer:true}); },
+    custAccept: async () => { if(!confirm("Accept this quotation?")) return; await Store.update("docs", id, {status:"accepted", respondedAt:Date.now()}); toast("Quotation accepted"); renderCustomerCase(cust.c.id); },
+    custDecline: async () => { if(!confirm("Decline this quotation?")) return; await Store.update("docs", id, {status:"declined", respondedAt:Date.now()}); toast("Quotation declined"); renderCustomerCase(cust.c.id); }
+  };
+  if(!ACT[act]) return;
+  try { await ACT[act](); } catch(x){ toast("Something went wrong: "+x.message); }
+});
+$("#wsTabs").addEventListener("click", e => { const b = e.target.closest("[data-ws]"); if(!b) return; state.ws.tab = b.dataset.ws; renderWs(); });
+
+/* ============ ADMIN ============ */
+function setupAdmin(){
+  $("#gate").addEventListener("submit", async e => {
+    e.preventDefault(); const err = $("#pinErr"); err.textContent = "";
+    if(Auth.cloud){
+      try {
+        if(!(Auth.user && isAdminUser())) await Auth.signIn($("#admEmail").value, $("#admPass").value);
+        $("#admPass").value = "";
+        if(!isAdminUser()) { err.textContent = "This account doesn’t have admin access."; return; }
+        await refresh(); updateAcctBtn(); renderAdmin();
+      } catch(x){ err.textContent = x.message; }
+      return;
+    }
+    if($("#pin").value === CONFIG.adminPin){ state.admin = true; $("#pin").value=""; renderAdmin(); }
+    else err.textContent = "That PIN is wrong.";
+  });
+  $("#admOut").onclick = async () => { state.admin = false; if(Auth.cloud && isAdminUser()) { await Auth.signOut(); updateAcctBtn(); } show("find"); };
+  $$("#adminArea .seg button").forEach(b => b.onclick = () => { state.adminTab = b.dataset.tab; renderAdmin(); });
+  $("#adminList").addEventListener("click", async e => {
+    const b = e.target.closest("[data-act]"); if(!b) return;
+    const {act, id} = b.dataset;
+    try {
+      if(act==="approve"){ await Store.update("providers",id,{status:"approved"}); toast("Listing approved"); }
+      if(act==="reject"){ await Store.update("providers",id,{status:"rejected"}); toast("Listing rejected"); }
+      if(act==="verify"){ const p=state.providers.find(x=>x.id===id); await Store.update("providers",id,{verified:!p.verified}); toast(p.verified?"Verified badge removed":"Marked as verified"); }
+      if(act==="unlist"){ await Store.update("providers",id,{status:"pending"}); toast("Moved back to approval queue"); }
+      if(act==="delprov"){ if(!confirm("Delete this provider permanently?")) return; await Store.remove("providers",id); toast("Provider deleted"); }
+      if(act==="closejob"){ await Store.update("jobs",id,{status:"closed"}); toast("Request closed"); }
+      if(act==="reopenjob"){ await Store.update("jobs",id,{status:"open"}); toast("Request reopened"); }
+      if(act==="deljob"){ if(!confirm("Delete this request permanently?")) return; await Store.remove("jobs",id); toast("Request deleted"); }
+      await refresh(); renderAdmin(); renderDir();
+    } catch(err){ toast("Action failed: "+err.message); }
+  });
+}
+function provDetails(p){
+  const kv = (k,v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : "";
+  return `<details><summary>Full details</summary><dl class="kv">${kv("Account",p.ownerEmail)}${kv("Contact person",p.owner)}${kv("Registration",p.regNo)}${kv("Phone",fmtPhone(p.phone))}${kv("WhatsApp",p.whatsapp&&fmtPhone(p.whatsapp))}${kv("Email",p.email)}${kv("Services",(p.categories||[]).map(c=>CAT[c]).join(", "))}${kv("Brands",(p.brands||[]).join(", "))}${kv("Covers",coverageText(p))}${kv("Certifications",p.certs)}${kv("About",p.about)}${kv("Submitted",new Date(p.createdAt).toLocaleString())}</dl></details>`;
+}
+function renderAdmin(){
+  const ok = Auth.cloud ? isAdminUser() : state.admin;
+  $("#pinWrap").hidden = Auth.cloud; $("#admLoginWrap").hidden = !Auth.cloud;
+  $("#gate").hidden = ok; $("#adminArea").hidden = !ok; if(!ok) return;
+  const pending = state.providers.filter(p=>p.status==="pending");
+  $$("#adminArea .seg button").forEach(b => {
+    b.setAttribute("aria-selected", b.dataset.tab===state.adminTab);
+    if(b.dataset.tab==="pending") b.textContent = `Waiting for approval (${pending.length})`;
+  });
+  const L = $("#adminList"), t = state.adminTab;
+  if(t==="pending"){
+    L.innerHTML = pending.length ? pending.map(p=>`<div class="adm-item"><header><div><h3>${esc(p.name)}</h3><p class="meta"><span>${esc(TYPES[p.type]?.[0]||"")}</span><span>${esc(p.island)}, ${esc(p.atoll)}</span><span>${ago(p.createdAt)}</span></p></div>
+      <div class="btns"><button class="btn small" data-act="approve" data-id="${esc(p.id)}">Approve</button><button class="btn small ghost" data-act="reject" data-id="${esc(p.id)}">Reject</button></div></header>${provDetails(p)}</div>`).join("")
+      : `<div class="empty"><h3>Nothing waiting</h3><p>New registrations will show up here for review.</p></div>`;
+  }
+  if(t==="providers"){
+    const all = state.providers.filter(p=>p.status!=="pending").sort((a,b)=>a.name.localeCompare(b.name));
+    L.innerHTML = all.length ? all.map(p=>`<div class="adm-item"><header><div><h3>${esc(p.name)}</h3><p class="meta"><span>${p.status==="approved"?(p.paused?"Hidden by owner":"Live"):"Rejected"}</span><span>${esc(p.island)}, ${esc(p.atoll)}</span><span>${(p.reviews||[]).length} reviews</span></p></div>
+      <div class="btns">${p.status==="approved"?`<button class="btn small ${p.verified?"ghost":""}" data-act="verify" data-id="${esc(p.id)}">${p.verified?"Remove verified badge":"Mark as verified"}</button><button class="btn small ghost" data-act="unlist" data-id="${esc(p.id)}">Unlist</button>`:`<button class="btn small" data-act="approve" data-id="${esc(p.id)}">Approve</button>`}
+      <button class="btn small ghost" data-act="delprov" data-id="${esc(p.id)}">Delete</button></div></header>${provDetails(p)}</div>`).join("")
+      : `<div class="empty"><h3>No providers yet</h3><p>Approved and rejected listings appear here.</p></div>`;
+  }
+  if(t==="jobs"){
+    const js = state.jobs.slice().sort((a,b)=>b.createdAt-a.createdAt);
+    L.innerHTML = js.length ? js.map(j=>`<div class="adm-item"><header><div><h3>${esc(j.title)}</h3><p class="meta"><span>${j.status==="open"?"Open":"Closed"}</span><span>${esc(j.island)}, ${esc(j.atoll)}</span><span>${esc(j.name)} ${esc(fmtPhone(j.phone))}</span><span>${ago(j.createdAt)}</span></p></div>
+      <div class="btns">${j.status==="open"?`<button class="btn small ghost" data-act="closejob" data-id="${esc(j.id)}">Close</button>`:`<button class="btn small ghost" data-act="reopenjob" data-id="${esc(j.id)}">Reopen</button>`}<button class="btn small ghost" data-act="deljob" data-id="${esc(j.id)}">Delete</button></div></header></div>`).join("")
+      : `<div class="empty"><h3>No requests yet</h3><p>Requests posted on the request board appear here.</p></div>`;
+  }
+}
+
+/* ============ THEME ============ */
+$("#themeBtn").onclick = () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark";
+};
+
+/* ============ START ============ */
+(async function start(){
+  drawDepth(); setupFind(); setupJobs(); setupRegister(); setupAuth(); setupAdmin();
+  try {
+    const mode = await Store.init();
+    $("#modeNote").hidden = mode !== "local";
+    await Auth.init(mode);
+    await refresh();
+    updateAcctBtn();
+  } catch(e){ toast("Couldn’t connect to the database: "+e.message); }
+  renderDir();
+  show(location.hash.slice(1) || "find");
+})();
+</script>
+</body>
+</html>
