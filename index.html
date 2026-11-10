@@ -220,6 +220,8 @@ textarea.input{min-height:96px;resize:vertical}
 .kv dt{color:var(--muted)}
 .kv dd{margin:0}
 .gate{max-width:380px}
+.wa-opt{margin-top:6px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.wa-opt .check{font-size:15px}
 .cat-row{display:grid;grid-template-columns:28px 1fr auto auto auto auto;gap:6px;align-items:center;margin-bottom:6px}
 .cat-n{color:var(--muted);font-size:13px;text-align:right}
 .cat-use{white-space:nowrap;margin:0 6px 0 4px}
@@ -654,6 +656,9 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
               <div class="field"><label class="f" for="rViber">Viber <small>(optional)</small></label><input class="input" id="rViber" inputmode="tel"></div>
               <div class="field"><label class="f" for="rEmail">Public email <small>(optional, shown on listing)</small></label><input class="input" id="rEmail" type="email"></div>
             </div>
+            <div class="wa-opt">
+              <label class="check"><input type="checkbox" id="rWaAlerts" checked> <span><b>Send me new job alerts on WhatsApp</b><br><span class="hint">When someone requests help in one of your services and atolls, we message your WhatsApp number. You can turn this off any time by editing your listing.</span></span></label>
+            </div>
           </fieldset>
           <fieldset data-step="3" hidden style="border:0;padding:0;margin:0">
             <h2>Check and submit</h2>
@@ -797,7 +802,9 @@ const CONFIG = {
   },
   // Set firebase: null to go back to demo mode (sample data, saved in this browser only).
   adminPin: "2468",
-  adminEmails: ["vaddever@gmail.com"]
+  adminEmails: ["vaddever@gmail.com"],
+  // WhatsApp job alerts: paste your Google Apps Script web app URL here (see marine-assist-alerts.gs). Leave "" to turn alerts off.
+  alertsUrl: ""
 };
 
 /* ============ REFERENCE DATA ============ */
@@ -1233,13 +1240,13 @@ function setupJobs(){
     if(miss.length) return $("#jobErr").textContent = "Add "+miss.join(", ")+".";
     if(!validPhone(job.phone)) return $("#jobErr").textContent = "Enter a 7-digit Maldivian phone number.";
     try {
-      if(jobMode.type==="board"){ const n = await Store.add("jobs", job); state.jobs.push(n); $("#jobForm").reset(); $("#jobDlg").close(); renderJobs(); showJobPosted(n); return; }
+      if(jobMode.type==="board"){ const n = await Store.add("jobs", job); state.jobs.push(n); $("#jobForm").reset(); $("#jobDlg").close(); renderJobs(); showJobPosted(n); notifyBusinesses("job", n.id); return; }
       const prov = jobMode.type==="direct" ? state.providers.find(x=>x.id===jobMode.providerId) : myListing();
       const rec = await Store.add("cases", {providerId:prov.id, ownerUid:prov.ownerUid, source:jobMode.type, jobId:null, title:job.title, category:job.category, boatType:job.boatType,
         engine:job.engine, description:job.description, atoll:job.atoll, island:job.island, urgency:job.urgency, customer:{name:job.name, phone:job.phone}, closed:false, docIds:[], createdAt:Date.now()});
       $("#jobForm").reset(); $("#jobDlg").close();
       if(jobMode.type==="manual"){ state.ws.cases.push(rec); state.ws.tab="requests"; renderWs(); openCase(rec.id); toast("Job added"); }
-      else showRequestSent(rec, prov);
+      else { showRequestSent(rec, prov); notifyBusinesses("case", rec.id); }
     }
     catch(err){ $("#jobErr").textContent = "Couldn’t post the request: "+err.message; }
   });
@@ -1358,6 +1365,7 @@ function fillForm(p){
   set("rName",p.name); set("rOwner",p.owner); set("rRegNo",p.regNo); set("rYears",p.years||""); set("rAbout",p.about);
   set("rCerts",p.certs); set("rHours",p.hours); set("rAtoll",p.atoll); set("rIsland",p.island); set("rAddress",p.address);
   set("rPhone",p.phone); set("rWhatsapp",p.whatsapp); set("rViber",p.viber); set("rEmail",p.email);
+  $("#rWaAlerts").checked = p.waAlerts !== false;
   $("#rMobile").checked = !!p.mobileService; $("#rEmergency").checked = !!p.emergency;
   $$("#rCats input").forEach(i => i.checked = (p.categories||[]).includes(i.value));
   $$("#rBrands input").forEach(i => i.checked = (p.brands||[]).includes(i.value));
@@ -1397,6 +1405,7 @@ function collect(){
     mobileService: $("#rMobile").checked, emergency: $("#rEmergency").checked,
     atoll: $("#rAtoll").value, island: $("#rIsland").value.trim(), address: $("#rAddress").value.trim(),
     coverage: all ? ["ALL"] : $$("#rCoverage input:checked").map(i=>i.value),
+    waAlerts: $("#rWaAlerts").checked,
     phone: digits($("#rPhone").value), whatsapp: digits($("#rWhatsapp").value), viber: digits($("#rViber").value), email: $("#rEmail").value.trim()
   };
 }
@@ -1446,6 +1455,7 @@ function summaryHTML(d){
     ${row("Services",d.categories.map(c=>CAT[c]).join(", "))}${row("Brands",d.brands.join(", "))}${row("Certifications",d.certs)}${row("Hours",d.hours)}
     ${row("Comes to the boat",d.mobileService?"Yes":"No")}${row("24/7 callouts",d.emergency?"Yes":"No")}
     ${row("Based in",d.island+", "+d.atoll)}${row("Covers",d.coverage.includes("ALL")?"Whole country":[d.atoll,...d.coverage].filter((v,i,a)=>a.indexOf(v)===i).join(", "))}
+    ${row("WhatsApp job alerts", d.waAlerts ? "On, to "+fmtPhone(d.whatsapp||d.phone) : "Off")}
     ${row("Phone",fmtPhone(d.phone))}${row("WhatsApp",d.whatsapp&&fmtPhone(d.whatsapp))}${row("Viber",d.viber&&fmtPhone(d.viber))}${row("Email",d.email)}${row("About",d.about)}</dl>`;
 }
 
@@ -2099,6 +2109,12 @@ document.addEventListener("click", async e => {
   try { await ACT[act](); } catch(x){ toast("Something went wrong: "+x.message); }
 });
 $("#wsTabs").addEventListener("click", e => { const b = e.target.closest("[data-ws]"); if(!b) return; state.ws.tab = b.dataset.ws; renderWs(); });
+
+/* ============ WHATSAPP ALERTS (via Apps Script) ============ */
+function notifyBusinesses(type, id){
+  if(!CONFIG.alertsUrl || !Auth.cloud) return;
+  try { fetch(CONFIG.alertsUrl, {method:"POST", mode:"no-cors", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({type, id})}); } catch {}
+}
 
 /* ============ TAKE A JOB FROM THE BOARD + JOB PROGRESS ============ */
 const STAGES = [["new","New"],["accepted","Job accepted"],["inspecting","Inspecting"],["waiting_parts","Waiting for parts"],["in_progress","Work in progress"],["completed","Completed"]];
