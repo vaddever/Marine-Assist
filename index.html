@@ -224,6 +224,12 @@ textarea.input{min-height:96px;resize:vertical}
 .kv dt{color:var(--muted)}
 .kv dd{margin:0}
 .gate{max-width:380px}
+.google-btn{width:100%;background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);font-weight:600}
+.google-btn::before{content:"G";display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--hull);color:#fff;font:700 13px/1 var(--body);margin-right:4px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .google-btn{color:var(--ink)!important}}
+:root[data-theme="dark"] .google-btn{color:var(--ink)!important}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:16px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
 .wa-opt{margin-top:6px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
 .wa-opt .check{font-size:15px}
 .cat-row{display:grid;grid-template-columns:28px 1fr auto auto auto auto;gap:6px;align-items:center;margin-bottom:6px}
@@ -565,6 +571,8 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
       </div>
       <form class="panel" id="authForm" novalidate>
         <p id="authIntro" style="margin-bottom:16px;color:var(--muted)">Sign in to manage your listing.</p>
+        <button type="button" class="btn google-btn" id="googleBtn">Continue with Google</button>
+        <div class="or"><span>or use email</span></div>
         <div class="field"><label class="f" for="aEmail">Email</label><input class="input" id="aEmail" type="email" autocomplete="email"></div>
         <div class="field"><label class="f" for="aPass">Password</label><input class="input" id="aPass" type="password" autocomplete="current-password"></div>
         <div class="field" id="aPass2Wrap" hidden><label class="f" for="aPass2">Confirm password</label><input class="input" id="aPass2" type="password" autocomplete="new-password"><p class="hint">At least 8 characters.</p></div>
@@ -702,6 +710,8 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
       <div id="pinWrap"><label class="f" for="pin">Admin PIN</label>
       <input class="input" id="pin" type="password" inputmode="numeric" autocomplete="off"></div>
       <div id="admLoginWrap" hidden>
+        <button type="button" class="btn google-btn" id="admGoogle">Continue with Google</button>
+        <div class="or"><span>or use email</span></div>
         <div class="field"><label class="f" for="admEmail">Admin email</label><input class="input" id="admEmail" type="email" autocomplete="email"></div>
         <label class="f" for="admPass">Password</label><input class="input" id="admPass" type="password" autocomplete="current-password">
       </div>
@@ -955,7 +965,9 @@ const Auth = (() => {
     if(crypto?.subtle){ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("marineassist:"+t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
     return "plain:"+t;
   }
-  const MSG = {"auth/email-already-in-use":"An account with this email already exists. Sign in instead.","auth/invalid-email":"Check the email address.",
+  const MSG = {"auth/account-exists-with-different-credential":"This email already has an account. Sign in with email and password instead.",
+    "auth/unauthorized-domain":"Google sign-in isn’t allowed on this web address yet. Add it under Firebase Authentication → Settings → Authorized domains.",
+    "auth/operation-not-allowed":"Google sign-in isn’t turned on yet in Firebase Authentication.","auth/email-already-in-use":"An account with this email already exists. Sign in instead.","auth/invalid-email":"Check the email address.",
     "auth/weak-password":"Use at least 8 characters.","auth/invalid-credential":"Email or password is wrong.","auth/wrong-password":"Email or password is wrong.",
     "auth/user-not-found":"No account with this email. Create one instead.","auth/too-many-requests":"Too many attempts. Wait a few minutes and try again."};
   const fail = e => { throw new Error(MSG[e.code] || e.message); };
@@ -964,6 +976,7 @@ const Auth = (() => {
       fb = firebase.auth();
       await new Promise(r => { const un = fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email} : null; un(); r(); }); });
       fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email} : null; onAuthChange(); });
+      fb.getRedirectResult().then(r => { if(r && r.user) afterSignIn("Signed in with Google"); }).catch(e => toast(MSG[e.code] || e.message));
       return;
     }
     const acc = getAcc();
@@ -988,7 +1001,17 @@ const Auth = (() => {
     if(fb){ try { await fb.sendPasswordResetEmail(email.trim()); return "We’ve emailed you a link to reset your password."; } catch(e){ fail(e); } }
     return "Password reset emails work once Firebase is connected. In demo mode, create a new account.";
   }
-  return {init, signUp, signIn, signOut, reset, get user(){ return user; }, get cloud(){ return !!fb; }};
+  async function google(){
+    if(!fb) throw new Error("Google sign-in works once Firebase is connected. In demo mode, use email and password.");
+    const prov = new firebase.auth.GoogleAuthProvider(); prov.setCustomParameters({prompt:"select_account"});
+    try { const c = await fb.signInWithPopup(prov); user = {uid:c.user.uid, email:c.user.email}; return user; }
+    catch(e){
+      if(["auth/popup-closed-by-user","auth/cancelled-popup-request"].includes(e.code)) return null;
+      if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment","auth/web-storage-unsupported"].includes(e.code)){ await fb.signInWithRedirect(prov); return null; }
+      fail(e);
+    }
+  }
+  return {init, signUp, signIn, signOut, reset, google, get user(){ return user; }, get cloud(){ return !!fb; }};
 })();
 const isAdminUser = () => Auth.cloud && Auth.user && CONFIG.adminEmails.map(e=>e.toLowerCase()).includes((Auth.user.email||"").toLowerCase());
 const myListing = () => Auth.user ? state.providers.find(p => p.ownerUid === Auth.user.uid) : null;
@@ -1314,7 +1337,18 @@ function paintAuth(){
   $("#aPass").autocomplete = up ? "new-password" : "current-password";
   $("#authErr").textContent = "";
 }
+async function afterSignIn(msg){
+  await refresh(); updateAcctBtn(); toast(msg);
+  if(location.hash==="#admin") renderAdmin(); else show("register");
+}
+async function googleSignIn(errEl){
+  errEl.textContent = "";
+  try { const u = await Auth.google(); if(u) await afterSignIn("Signed in with Google"); }
+  catch(x){ errEl.textContent = x.message; }
+}
 function setupAuth(){
+  $("#googleBtn").onclick = () => googleSignIn($("#authErr"));
+  $("#admGoogle").onclick = () => googleSignIn($("#pinErr"));
   $$("#authBox [data-auth]").forEach(b => b.onclick = () => { authMode = b.dataset.auth; paintAuth(); });
   $("#authForm").addEventListener("submit", async e => {
     e.preventDefault();
@@ -1327,9 +1361,7 @@ function setupAuth(){
     const btn = $("#authSubmit"); btn.disabled = true;
     try {
       authMode==="signup" ? await Auth.signUp(email,pw) : await Auth.signIn(email,pw);
-      $("#authForm").reset(); await refresh(); updateAcctBtn();
-      toast(authMode==="signup" ? "Account created" : "Signed in");
-      if(isAdminUser() && location.hash==="#admin") renderAdmin(); else show("register");
+      $("#authForm").reset(); await afterSignIn(authMode==="signup" ? "Account created" : "Signed in");
     } catch(x){ err.textContent = x.message; }
     btn.disabled = false;
   });
