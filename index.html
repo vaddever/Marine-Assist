@@ -124,6 +124,10 @@ textarea.input{min-height:96px;resize:vertical}
 @media (max-width:900px) and (min-width:641px){.searchbar{grid-template-columns:1fr 1fr}.searchbar .btn{grid-column:span 2}}
 .searchbar .input{border:0;background:var(--surface);height:48px}
 .searchbar .btn{height:48px;padding:0 26px}
+.hero-err{margin-top:10px;color:var(--signal);font-weight:600;font-size:15px}
+#heroCat.need{box-shadow:0 0 0 3px var(--signal)}
+#heroCat:invalid{color:var(--muted)}
+#heroCat option{color:var(--ink)}
 .sos{margin-top:30px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding-top:20px;border-top:1px solid rgba(255,255,255,.12)}
 .sos p{color:var(--hull-muted);font-size:15px}
 .sos p strong{color:var(--hull-ink)}
@@ -473,15 +477,16 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
     <div class="wrap">
       <h1>Your Marine Helper</h1>
       <p class="lede">Engine trouble, a cracked hull, a radio that won’t transmit. Search marine service providers across the Maldives, or post a request and let them call you.</p>
-      <form class="searchbar" id="heroSearch" role="search">
+      <form class="searchbar" id="heroSearch" role="search" novalidate>
         <label class="sr" for="q">What do you need?</label>
         <input class="input" id="q" type="search" placeholder="Describe it, e.g. Yamaha 200 service">
-        <label class="sr" for="heroCat">Type of help</label>
-        <select class="input" id="heroCat"></select>
+        <label class="sr" for="heroCat">Type of help (required)</label>
+        <select class="input" id="heroCat" required aria-describedby="heroErr"></select>
         <label class="sr" for="heroAtoll">Atoll</label>
         <select class="input" id="heroAtoll"></select>
         <button class="btn signal" type="submit">Search</button>
       </form>
+      <p class="hero-err" id="heroErr" role="alert" hidden>Choose the type of help you need, then search.</p>
       <div class="sos">
         <button class="btn alarm" id="sosBtn" type="button">Broken down? Show 24/7 help</button>
         <p>In a life-threatening emergency at sea, call the <strong>MNDF Coast Guard on 191</strong> first.</p>
@@ -824,13 +829,14 @@ function catCheckboxes(selected){ return CATS.map(([k,v])=>`<label class="check"
 function renderCatControls(){
   const keep = id => $("#"+id)?.value || "";
   const hc = keep("heroCat"), jc = keep("jCat"), jC = keep("jC");
-  $("#heroCat").innerHTML = opts(CATS,"Any type of help"); $("#heroCat").value = CAT[hc] ? hc : "";
+  $("#heroCat").innerHTML = heroCatOpts(); $("#heroCat").value = CAT[hc] ? hc : "";
   $("#jCat").innerHTML = opts(CATS,"All services"); $("#jCat").value = CAT[jc] ? jc : "";
   $("#jC").innerHTML = opts(CATS,"Choose a service"); $("#jC").value = CAT[jC] ? jC : "";
   $("#fCats").innerHTML = catCheckboxes(state.f.cats);
   const regSel = new Set($$("#rCats input:checked").map(i=>i.value));
   $("#rCats").innerHTML = catCheckboxes(regSel);
 }
+function heroCatOpts(){ return `<option value="" disabled selected>Choose type of help</option>` + opts(CATS); }
 function setCats(items){
   if(!Array.isArray(items) || !items.length) return;
   CATS = items.filter(i=>i && i.id && i.label).map(i=>[String(i.id), String(i.label)]);
@@ -1072,14 +1078,16 @@ function setupFind(){
   $("#fType").innerHTML = opts(Object.entries(TYPES).map(([k,v])=>[k,v[0]]),"All types");
   $("#fBrand").innerHTML = opts(BRANDS,"Any brand");
   $("#fCats").innerHTML = catCheckboxes(new Set());
-  $("#heroCat").innerHTML = opts(CATS,"Any type of help");
+  $("#heroCat").innerHTML = heroCatOpts();
 
   $("#heroSearch").addEventListener("submit", e => {
     e.preventDefault(); state.f.q = $("#q").value; state.f.atoll = $("#heroAtoll").value; $("#fAtoll").value = state.f.atoll;
-    const hc = $("#heroCat").value; state.f.cats = hc ? new Set([hc]) : new Set(); syncCatBoxes();
+    const hc = $("#heroCat").value;
+    if(!hc){ $("#heroErr").hidden = false; $("#heroCat").classList.add("need"); $("#heroCat").focus(); return; }
+    state.f.cats = new Set([hc]); syncCatBoxes();
     renderDir(); $("#results").scrollIntoView({behavior:"smooth"});
   });
-  $("#heroCat").addEventListener("change", e => { const v = e.target.value; state.f.cats = v ? new Set([v]) : new Set(); syncCatBoxes(); renderDir(); });
+  $("#heroCat").addEventListener("change", e => { $("#heroErr").hidden = true; e.target.classList.remove("need"); const v = e.target.value; state.f.cats = v ? new Set([v]) : new Set(); syncCatBoxes(); renderDir(); });
   $("#sosBtn").addEventListener("click", () => {
     state.f.emergency = true; $("#fEmergency").checked = true; state.f.atoll = $("#heroAtoll").value; $("#fAtoll").value = state.f.atoll;
     renderDir(); $("#results").scrollIntoView({behavior:"smooth"});
