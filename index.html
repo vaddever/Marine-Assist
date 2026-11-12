@@ -303,7 +303,24 @@ footer b{color:var(--hull-ink)}
 .plan .amt{color:var(--ink);margin-top:8px}
 .plan:has(input:checked){border-color:var(--lagoon);background:var(--lagoon-soft)}
 .plan:has(input:focus-visible){outline:3px solid var(--signal);outline-offset:2px}
-.plan-row{display:grid;grid-template-columns:1.5fr 100px 130px 44px;gap:8px;align-items:end;margin-bottom:8px}
+.plan-row{display:grid;grid-template-columns:1.5fr 90px 120px 100px 44px;gap:8px;align-items:end;margin-bottom:8px}
+.plan{position:relative}
+.plan .save{position:absolute;top:10px;right:10px;background:var(--signal);color:var(--signal-ink);font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px}
+.plan .was{text-decoration:line-through;margin-top:8px}
+.plan .was+.amt{margin-top:0}
+.sub-status{display:flex;justify-content:space-between;gap:16px;align-items:center}
+.daysleft{text-align:center;flex-shrink:0;line-height:1.1}
+.daysleft strong{display:block;font:700 40px/1 var(--display)}
+.daysleft span{font-size:13px;color:var(--muted)}
+.daysleft.small{display:inline-flex;align-items:baseline;gap:5px;padding:3px 10px;border-radius:6px;background:var(--lagoon-soft);color:var(--lagoon)}
+.daysleft.small strong{font-size:20px;display:inline}
+.daysleft.small span{color:inherit;font-weight:600;font-size:12.5px}
+.daysleft.small.warn{background:var(--signal);color:var(--signal-ink)}
+.daysleft.small.alarm{background:var(--alarm-soft);color:var(--alarm)}
+.substrip{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);border-left:5px solid var(--lagoon)}
+.substrip.pending{border-left-color:var(--signal)}
+.substrip.rejected{border-left-color:var(--alarm)}
+.substrip .sd{color:var(--muted);margin-left:8px}
 @media (max-width:640px){.plan-row{grid-template-columns:1fr 1fr}}
 .stages{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .stages li{font-size:13.5px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
@@ -596,6 +613,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
 
     <!-- Business workspace -->
     <div class="ws" id="wsBox" hidden>
+      <div id="wsSubStrip" hidden></div>
       <div class="seg" role="tablist" id="wsTabs">
         <button type="button" role="tab" data-ws="requests">Requests</button>
         <button type="button" role="tab" data-ws="quotes">Quotations</button>
@@ -1335,7 +1353,7 @@ function renderBiz(){
   }
   if(mine && !editingId){
     $("#bizTitle").textContent = "Workspace"; $("#bizLede").textContent = "Handle requests, send quotations and invoices, and check payment slips.";
-    renderWs(); if(liveOff.length) return; loadWs().then(()=>{ renderWs(); startLive(); }).catch(e=>toast("Couldn’t load your workspace: "+e.message)); return;
+    renderWs(); loadSub().then(wsCounts); if(liveOff.length) return; loadWs().then(()=>{ renderWs(); startLive(); }).catch(e=>toast("Couldn’t load your workspace: "+e.message)); return;
   }
   if(editingId){ $("#bizTitle").textContent = "Edit listing"; $("#bizLede").textContent = "Changes show on the public directory as soon as you save."; }
   else { $("#bizTitle").textContent = "Register your business"; $("#bizLede").textContent = "Every listing is checked by an admin before it goes live."; }
@@ -1593,10 +1611,14 @@ function wsCounts(){
   $$("#wsTabs button").forEach(b => {
     const k = b.dataset.ws, n = k==="requests" ? newN : k==="payments" ? slipN : k==="quotes" ? accN : k==="sub" ? subN : 0;
     b.setAttribute("aria-selected", k===tab);
-    b.hidden = k==="sub" && !SUB.enabled;
     b.innerHTML = esc(WS_LABEL[k]) + (n ? `<span class="count">${n}</span>` : "");
   });
   const total = me ? newN + slipN + accN + subN : 0;
+  const strip = $("#wsSubStrip");
+  if(me && SUB.enabled){ const i = subInfo(me);
+    strip.innerHTML = `<div class="substrip ${i.cls}"><span><b>${esc(i.title)}</b>${i.days ? ` <span class="sd">${esc(i.days)}</span>` : ""}</span><button class="btn small${i.expired||i.soon?"":" ghost"}" data-act="goSub">${i.expired ? "Renew now" : i.soon ? "Renew" : "View plans"}</button></div>`;
+    strip.hidden = false;
+  } else strip.hidden = true;
   $("#navBiz").innerHTML = esc(Auth.user && myListing() ? "Workspace" : "List your business") + (total ? `<span class="navcount">${total}</span>` : "");
   document.title = (total ? `(${total}) ` : "") + BASE_TITLE;
 }
@@ -2271,7 +2293,8 @@ async function renderCustomerJob(id){
     ${j.status==="open" ? `<p class="hint" style="margin-top:14px">When a business takes it, this page shows who is handling it, their progress, and any quotation or invoice. Businesses may also call you on ${esc(fmtPhone(j.phone))}.</p>` : ""}</div>`;
 }
 /* ============ SUBSCRIPTIONS ============ */
-const SUB_DEFAULT = {enabled:false, freeDays:30, currency:"MVR", plans:[{id:"monthly",name:"Monthly",days:30,price:300},{id:"yearly",name:"Yearly",days:365,price:3000}], banks:[], note:""};
+const SUB_DEFAULT = {enabled:false, freeDays:30, currency:"MVR", plans:[{id:"monthly",name:"Monthly",days:30,price:300,discount:0},{id:"yearly",name:"Yearly",days:365,price:3600,discount:15}], banks:[], note:""};
+const planPrice = pl => Math.round((+pl.price||0) * (1 - Math.min(90, Math.max(0, +pl.discount||0))/100) * 100) / 100;
 let SUB = structuredClone(SUB_DEFAULT);
 async function loadSub(){ try { const c = await Store.get("config","subscription"); if(c){ SUB = {...SUB_DEFAULT, ...c}; delete SUB.id; } } catch {} }
 const fmtMs = ms => new Date(ms).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
@@ -2279,13 +2302,13 @@ const trialEnd = (p, free=SUB.freeDays) => (+p.approvedAt || +p.createdAt || 0) 
 const subEnd = (p, free) => Math.max(trialEnd(p, free), +p.subUntil||0);
 const subActive = p => !SUB.enabled || subEnd(p) > Date.now();
 const durLabel = d => d%365===0 ? (d/365===1 ? "1 year" : d/365+" years") : d%30===0 ? (d/30===1 ? "1 month" : d/30+" months") : d+" days";
-function subInfo(p){
-  if(!SUB.enabled) return {cls:"live", title:"Free listing", text:"Listings are free right now. There is nothing to pay.", short:"Free"};
-  if(p.status!=="approved") return {cls:"pending", title:"Starts when approved", text:`Your ${SUB.freeDays}-day free period starts the day an admin approves your listing.`, short:"Not started"};
-  const end = subEnd(p), left = Math.ceil((end-Date.now())/day), paid = (+p.subUntil||0) > trialEnd(p), d = `${left} day${left===1?"":"s"} left.`;
-  if(left<=0) return {cls:"rejected", title:"Subscription expired", text:`Your listing has been hidden from customers since ${fmtMs(end)}. Buy a plan to show it again.`, short:"Expired "+fmtMs(end), expired:true};
-  if(paid) return {cls:left<=7?"pending":"live", title:`Subscribed until ${fmtMs(end)}`, text:d+(left<=7?" Renew now to stay visible.":""), short:"Subscribed until "+fmtMs(end), soon:left<=7};
-  return {cls:left<=7?"pending":"live", title:`Free period until ${fmtMs(end)}`, text:d+" Buy a plan before then to stay visible to customers.", short:"Free until "+fmtMs(end), soon:left<=7};
+function subInfo(p, force){
+  if(!SUB.enabled && !force) return {cls:"live", title:"Free listing", text:"Listings are free right now. There is nothing to pay.", short:"Free", days:""};
+  if(p.status!=="approved") return {cls:"pending", title:"Starts when approved", text:`Your ${SUB.freeDays}-day free period starts the day an admin approves your listing.`, short:"Not started", days:`${SUB.freeDays} free days after approval`};
+  const end = subEnd(p), left = Math.ceil((end-Date.now())/day), paid = (+p.subUntil||0) > trialEnd(p), days = `${left} day${left===1?"":"s"} left`;
+  if(left<=0) return {cls:"rejected", title:"Subscription expired", text:`Your listing has been hidden from customers since ${fmtMs(end)}. Buy a plan to show it again.`, short:"Expired "+fmtMs(end), days:"0 days left", left:0, expired:true};
+  if(paid) return {cls:left<=7?"pending":"live", title:`Subscribed until ${fmtMs(end)}`, text:days+"."+(left<=7?" Renew now to stay visible.":""), short:"Subscribed until "+fmtMs(end), days, left, soon:left<=7};
+  return {cls:left<=7?"pending":"live", title:`Free period until ${fmtMs(end)}`, text:days+". Buy a plan before then to stay visible to customers.", short:"Free until "+fmtMs(end), days, left, soon:left<=7};
 }
 
 /* ----- business: Subscription tab ----- */
@@ -2293,13 +2316,14 @@ let subPick = null;
 async function loadSubPays(){ if(Auth.user) state.ws.subpays = (await Store.query("subpayments","ownerUid",Auth.user.uid)).sort((a,b)=>b.createdAt-a.createdAt); }
 function wsSub(p){
   const info = subInfo(p), pays = state.ws.subpays||[], pending = pays.find(x=>x.status==="pending"), plan = SUB.plans.find(x=>x.id===subPick);
-  let h = `<div class="ws-bar"><h2>Subscription</h2></div><div class="status ${info.cls}"><b>${esc(info.title)}</b><span>${esc(info.text)}</span></div>`;
-  if(!SUB.enabled) return h;
+  let h = `<div class="ws-bar"><h2>Subscription</h2></div><div class="status ${info.cls} sub-status"><div><b>${esc(info.title)}</b><span>${esc(info.text)}</span></div>${info.left!=null ? `<div class="daysleft"><strong>${info.left}</strong><span>day${info.left===1?"":"s"} left</span></div>` : ""}</div>`;
+  if(!SUB.enabled) return h + (SUB.plans.length ? `<p class="hint">Subscriptions aren’t required yet. When they start, these plans will be available here.</p>` : "");
   if(pending) h += `<div class="status pending"><b>Payment being checked</b><span>${money(pending.amount,pending.currency)} for the ${esc(pending.planName)} plan, sent ${ago(pending.createdAt)}. Your subscription is extended as soon as the admin confirms it.</span></div>`;
-  h += `<h3 class="sub-h">${pending ? "Plans" : "Choose a plan"}</h3><div class="plans">${SUB.plans.map(pl=>`<label class="plan"><input type="radio" name="subplan" value="${esc(pl.id)}"${pl.id===subPick?" checked":""}><b>${esc(pl.name)}</b><span>${durLabel(+pl.days)}</span><span class="amt">${money(pl.price,SUB.currency)}</span></label>`).join("")}</div>`;
+  h += `<h3 class="sub-h">${pending ? "Plans" : "Choose a plan"}</h3><div class="plans">${SUB.plans.map(pl=>`<label class="plan"><input type="radio" name="subplan" value="${esc(pl.id)}"${pl.id===subPick?" checked":""}>${+pl.discount>0?`<span class="save">Save ${esc(+pl.discount)}%</span>`:""}<b>${esc(pl.name)}</b><span>${durLabel(+pl.days)}</span>
+      ${+pl.discount>0?`<span class="was">${money(pl.price,SUB.currency)}</span>`:""}<span class="amt">${money(planPrice(pl),SUB.currency)}</span>${+pl.days>=60?`<span>about ${money(planPrice(pl)/(+pl.days/30),SUB.currency)} a month</span>`:""}</label>`).join("")}</div>`;
   if(SUB.note) h += `<p class="hint" style="margin-top:8px">${esc(SUB.note)}</p>`;
   if(plan){
-    h += `<div class="panel" style="margin-top:16px"><h3 class="sub-h" style="margin-top:0">Pay ${money(plan.price,SUB.currency)} by bank transfer</h3>` +
+    h += `<div class="panel" style="margin-top:16px"><h3 class="sub-h" style="margin-top:0">Pay ${money(planPrice(plan),SUB.currency)} by bank transfer</h3>${+plan.discount>0?`<p class="hint" style="margin:-4px 0 10px">${esc(plan.name)} plan: ${money(plan.price,SUB.currency)} less ${esc(+plan.discount)}% discount.</p>`:""}` +
       (SUB.banks.length ? SUB.banks.map(b=>`<div class="bank"><b>${esc(b.bank)}</b> <span class="hint">${esc(b.currency)}</span><br>${esc(b.name)}<br><code>${esc(b.number)}</code> <button type="button" class="btn ghost small" data-act="copyRaw" data-v="${esc(b.number)}" data-msg="Account number copied">Copy</button></div>`).join("")
         : `<p class="hint">Bank details haven’t been added yet. Contact the ${esc(BRAND)} admin.</p>`) +
       `<p class="hint">Use your business name as the transfer reference.</p>
@@ -2323,7 +2347,7 @@ $("#wsPanel").addEventListener("submit", async e => {
   try {
     const sl = await Store.add("slips", {...(await readSlip(file)), createdAt:Date.now()});
     await Store.add("subpayments", {providerId:p.id, providerName:p.name, ownerUid:Auth.user.uid, ownerEmail:Auth.user.email||"", planId:plan.id, planName:plan.name, days:+plan.days,
-      amount:+plan.price, currency:SUB.currency, reference:$("#sbRef").value.trim(), slipId:sl.id, status:"pending", createdAt:Date.now()});
+      amount:planPrice(plan), listPrice:+plan.price, discount:+plan.discount||0, currency:SUB.currency, reference:$("#sbRef").value.trim(), slipId:sl.id, status:"pending", createdAt:Date.now()});
     subPick = null; await loadSubPays(); toast("Slip sent. The admin will check it and extend your subscription."); renderWs();
   } catch(x){ err.textContent = x.message; btn.disabled = false; btn.textContent = "Send payment slip"; }
 });
@@ -2341,19 +2365,20 @@ function renderAdminSubs(){
   const pend = adminSubs.list.filter(x=>x.status==="pending"), done = adminSubs.list.filter(x=>x.status!=="pending").slice(0,15);
   const provs = state.providers.filter(p=>p.status==="approved").sort((a,b)=>subEnd(a)-subEnd(b));
   const payRow = (x, actions) => `<div class="adm-item"><header><div><h3>${esc(x.providerName)} <span style="font-weight:500;color:var(--muted)">${esc(x.planName)}, ${durLabel(+x.days)}</span></h3>
-      <p class="meta"><span>${money(x.amount,x.currency)}</span>${x.reference?`<span>Ref ${esc(x.reference)}</span>`:""}<span>${esc(x.ownerEmail||"")}</span><span>${ago(x.createdAt)}</span></p>${x.status==="rejected"&&x.reason?`<p class="hint">Reason: ${esc(x.reason)}</p>`:""}</div>
+      <p class="meta"><span>${money(x.amount,x.currency)}${+x.discount>0?` (${esc(+x.discount)}% off ${money(x.listPrice,x.currency)})`:""}</span>${x.reference?`<span>Ref ${esc(x.reference)}</span>`:""}<span>${esc(x.ownerEmail||"")}</span><span>${ago(x.createdAt)}</span></p>${x.status==="rejected"&&x.reason?`<p class="hint">Reason: ${esc(x.reason)}</p>`:""}</div>
       <div class="btns">${x.slipId?`<button class="btn small ghost" data-act="slip" data-id="${esc(x.slipId)}">View slip</button>`:""}${actions ? `<button class="btn small" data-act="subOk" data-id="${esc(x.id)}">Approve</button><button class="btn small ghost" data-act="subNo" data-id="${esc(x.id)}">Reject</button>` : badge(x.status==="approved"?["Approved","ok"]:["Rejected","alarm"])}</div></header></div>`;
   L.innerHTML = (SUB.enabled ? "" : `<div class="status pending"><b>Subscriptions are switched off</b><span>All approved listings stay visible for free. Turn subscriptions on under Subscription settings.</span></div>`) +
     `<h3 class="sub-h" style="margin-top:0">Payments to check (${pend.length})</h3>` + (pend.length ? pend.map(x=>payRow(x,true)).join("") : `<p style="color:var(--muted)">No payments waiting.</p>`) +
-    `<h3 class="sub-h">Businesses</h3>` + (provs.length ? provs.map(p=>{ const i = subInfo(p); return `<div class="adm-item"><header><div><h3>${esc(p.name)}</h3><p class="meta"><span>${esc(p.island)}, ${esc(p.atoll)}</span><span>${esc(p.ownerEmail||"")}</span></p></div>
-      <div class="btns">${badge([i.short, i.expired?"alarm":i.soon?"warn":"ok"])}<button class="btn small ghost" data-act="subExt" data-id="${esc(p.id)}">Add days</button></div></header></div>`; }).join("") : `<p style="color:var(--muted)">No approved businesses yet.</p>`) +
+    `<h3 class="sub-h">Businesses and days remaining</h3>` + (provs.length ? provs.map(p=>{ const i = subInfo(p, true); return `<div class="adm-item"><header><div><h3>${esc(p.name)}</h3><p class="meta"><span>${esc(p.island)}, ${esc(p.atoll)}</span><span>${esc(p.ownerEmail||"")}</span><span>${esc(i.short)}</span></p></div>
+      <div class="btns"><span class="daysleft small ${i.expired?"alarm":i.soon?"warn":""}"><strong>${i.left??0}</strong><span>day${i.left===1?"":"s"} left</span></span><button class="btn small ghost" data-act="subExt" data-id="${esc(p.id)}">Add days</button></div></header></div>`; }).join("") : `<p style="color:var(--muted)">No approved businesses yet.</p>`) +
     (done.length ? `<h3 class="sub-h">Recent decisions</h3>` + done.map(x=>payRow(x,false)).join("") : "");
 }
 function planRow(pl={}){
   return `<div class="plan-row"><input type="hidden" data-p="id" value="${esc(pl.id||"")}">
     <div><label class="f">Plan name</label><input class="input" data-p="name" value="${esc(pl.name||"")}" placeholder="e.g. 6 months"></div>
     <div><label class="f">Days</label><input class="input" data-p="days" type="number" min="1" value="${esc(pl.days||"")}"></div>
-    <div><label class="f">Price</label><input class="input" data-p="price" type="number" min="0" step="0.01" value="${esc(pl.price??"")}"></div>
+    <div><label class="f">Full price</label><input class="input" data-p="price" type="number" min="0" step="0.01" value="${esc(pl.price??"")}"></div>
+    <div><label class="f">Discount %</label><input class="input" data-p="discount" type="number" min="0" max="90" step="1" value="${esc(pl.discount||"")}" placeholder="0"></div>
     <button type="button" class="btn ghost small" data-rmplan aria-label="Remove plan" style="height:44px">✕</button></div>`;
 }
 function renderSubCfg(){
@@ -2366,6 +2391,7 @@ function renderSubCfg(){
       <div class="field"><label class="f" for="scCur">Currency</label><select class="input" id="scCur"><option${SUB.currency!=="USD"?" selected":""}>MVR</option><option${SUB.currency==="USD"?" selected":""}>USD</option></select></div>
     </div>
     <h3 class="sub-h">Plans</h3>
+    <p class="hint" style="margin:-4px 0 12px">For an annual discount, set the yearly plan’s full price (for example 12 × the monthly price) and a discount %. Businesses see the full price crossed out, the discounted price and “Save X%”.</p>
     <div id="planRows">${(SUB.plans.length ? SUB.plans : [{}]).map(planRow).join("")}</div>
     <button type="button" class="btn ghost small" id="addPlan">Add a plan</button>
     <h3 class="sub-h">Bank accounts businesses pay into</h3>
@@ -2381,7 +2407,7 @@ function renderSubCfg(){
   $("#subCfgForm").onsubmit = async e => {
     e.preventDefault(); const err = $("#scErr");
     const plans = $$("#planRows .plan-row").map(r => Object.fromEntries($$("[data-p]",r).map(i=>[i.dataset.p, i.value.trim()]))).filter(p=>p.name||p.days||p.price)
-      .map(p=>({id:p.id || slug(p.name)+"-"+uid().slice(-4), name:p.name, days:Math.round(+p.days), price:+p.price}));
+      .map(p=>({id:p.id || slug(p.name)+"-"+uid().slice(-4), name:p.name, days:Math.round(+p.days), price:+p.price, discount:Math.min(90, Math.max(0, Math.round(+p.discount||0)))}));
     const banks = $$("#scBanks .bank-row").map(r => Object.fromEntries($$("[data-b]",r).map(i=>[i.dataset.b, i.value.trim()]))).filter(b=>b.bank||b.number||b.name);
     const cfg = {enabled:$("#scOn").checked, freeDays:Math.max(0, Math.round(+$("#scFree").value||0)), currency:$("#scCur").value, plans, banks, note:$("#scNote").value.trim(), updatedAt:Date.now()};
     if(plans.some(p=>!p.name || !(p.days>0) || !(p.price>=0) || isNaN(p.price))) return err.textContent = "Every plan needs a name, a number of days and a price.";

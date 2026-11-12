@@ -23,7 +23,7 @@ const CFG = {
   API_KEY: '',             // not needed: Firestore reads here are public. Leave empty so a referrer-restricted key isn't required.
   SITE_URL: 'https://vaddever.github.io/marine-assist/',  // ← change to where the portal is hosted
   WA_VERSION: 'v25.0',                                    // Meta Graph API version
-  TEMPLATE: 'new_job_alert',                              // approved template name
+  TEMPLATE: 'job_request_alert',                              // approved template name
   LANG: 'en',                                             // template language code as approved in WhatsApp Manager
   COUNTRY_CODE: '960',
   MAX_AGE_MIN: 120,        // ignore requests older than this (stops re-sending old jobs)
