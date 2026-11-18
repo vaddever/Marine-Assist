@@ -18,12 +18,14 @@
  *  6. Optional: add a daily time trigger for cleanupOldKeys().
  */
 
+const SCRIPT_VERSION = '2026-11-18b';   // shown when you open the web app URL: tells you which version is deployed
+
 const CFG = {
   PROJECT_ID: 'marine-assist-ae874',
   API_KEY: '',             // not needed: Firestore reads here are public. Leave empty so a referrer-restricted key isn't required.
-  SITE_URL: 'https://vaddever.github.io/marine-assist/',  // ← change to where the portal is hosted
+  SITE_URL: 'https://marineassist.vercel.app/',           // where the portal is hosted
   WA_VERSION: 'v25.0',                                    // Meta Graph API version
-  TEMPLATE: 'job_request_alert',                              // approved template name
+  TEMPLATE: 'job_request_alert',                          // approved template name
   LANG: 'en',                                             // template language code as approved in WhatsApp Manager
   COUNTRY_CODE: '960',
   MAX_AGE_MIN: 120,        // ignore requests older than this (stops re-sending old jobs)
@@ -47,6 +49,8 @@ function doPost(e) {
     props.setProperty(key, String(Date.now()));          // mark first so repeats are ignored
     const result = type === 'job' ? alertForJob(id) : alertForCase(id);
     console.log(JSON.stringify({ type, id, result }));
+    // If every message failed (e.g. template problem), forget this request so a later ping can retry it
+    if (result && typeof result === 'object' && result.failed > 0 && !result.sent) props.deleteProperty(key);
     return out({ ok: true, result });
   } catch (err) {
     console.error(err);
@@ -55,7 +59,40 @@ function doPost(e) {
     lock.releaseLock();
   }
 }
-function doGet() { return out({ ok: true, service: 'Marine Assist alerts' }); }
+function doGet(e) {
+  const q = (e && e.parameter) || {};
+  if (q.job) return out(diagnoseJob(String(q.job)));     // open  <web app URL>?job=JOB_ID  to see who would get the alert
+  return out({ ok: true, service: 'Marine Assist alerts', version: SCRIPT_VERSION, template: CFG.TEMPLATE, language: CFG.LANG,
+    tokenSet: !!PropertiesService.getScriptProperties().getProperty('WA_TOKEN'), phoneIdSet: !!PropertiesService.getScriptProperties().getProperty('WA_PHONE_ID') });
+}
+
+/** Explains, without sending anything, what would happen for a job and why each business is or isn't alerted. */
+function diagnoseJob(jobId) {
+  const job = fsGet('jobs/' + jobId);
+  if (!job) return { job: 'not found', hint: 'Check the ID: it is the part after #j= in the customer link.' };
+  const sub = fsGet('config/subscription');
+  const already = PropertiesService.getScriptProperties().getProperty('sent_job_' + jobId);
+  const report = fsList('providers').map(p => {
+    const why = [];
+    if (p.status !== 'approved') why.push('not approved');
+    if (p.paused) why.push('hidden by owner');
+    if (p.waAlerts === false) why.push('WhatsApp alerts turned off');
+    if (!(p.categories || []).includes(job.category)) why.push('does not offer this service');
+    const cov = p.coverage || [];
+    if (job.atoll && !(p.atoll === job.atoll || cov.includes(job.atoll) || cov.includes('ALL'))) why.push('does not cover ' + job.atoll);
+    if (!subscribed(p, sub)) why.push('subscription expired');
+    if (!waNumber(p)) why.push('no valid 7-digit number');
+    return { business: p.name, number: waNumber(p), alerted: why.length === 0, reason: why.join(', ') || 'matches' };
+  });
+  return {
+    version: SCRIPT_VERSION,
+    job: { title: job.title, category: job.category, atoll: job.atoll, status: job.status,
+           minutesOld: typeof job.createdAt === 'number' ? Math.round((Date.now() - job.createdAt) / 60000) : 'unknown' },
+    alreadyNotified: already ? new Date(Number(already)).toISOString() : false,
+    wouldAlert: report.filter(r => r.alerted).length,
+    businesses: report
+  };
+}
 
 /* ---------------- request types ---------------- */
 function alertForJob(jobId) {

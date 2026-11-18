@@ -321,6 +321,15 @@ footer b{color:var(--hull-ink)}
 .substrip.pending{border-left-color:var(--signal)}
 .substrip.rejected{border-left-color:var(--alarm)}
 .substrip .sd{color:var(--muted);margin-left:8px}
+.alertstrip{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;margin-bottom:14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);border-left:5px solid var(--line)}
+.alertstrip.on{border-left-color:var(--lagoon)}
+.alertstrip .sd{color:var(--muted);margin-left:8px}
+.switch{position:relative;width:52px;height:30px;border-radius:15px;border:0;background:var(--line);cursor:pointer;flex-shrink:0;padding:0}
+.switch span{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--lagoon)}
+.switch[aria-checked="true"] span{left:25px}
+.switch:disabled{opacity:.6}
+@media (max-width:640px){.alertstrip .sd,.substrip .sd{display:block;margin-left:0;font-size:13px}}
 @media (max-width:640px){.plan-row{grid-template-columns:1fr 1fr}}
 .stages{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .stages li{font-size:13.5px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
@@ -588,7 +597,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
 <section class="view" id="view-register" hidden>
   <div class="page-head"><div class="wrap">
     <h1 id="bizTitle">List your marine business</h1>
-    <p id="bizLede">Freelance engineers, workshops, parts shops and marine companies can list for free. Every listing is checked by an admin before it goes live.</p>
+    <p id="bizLede">Freelance engineers, workshops, parts shops and marine companies can list here.</p>
   </div></div>
   <div class="wrap">
     <!-- Sign in / create account -->
@@ -686,7 +695,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
             <p class="sub">Your base, the atolls you cover, and how customers reach you.</p>
             <div class="grid2">
               <div class="field"><label class="f" for="rAtoll">Base atoll</label><select class="input" id="rAtoll" required></select></div>
-              <div class="field"><label class="f" for="rIsland">Island</label><input class="input" id="rIsland" required placeholder="e.g. Hulhumalé"></div>
+              <div class="field"><label class="f" for="rIslandSel">Island</label><input class="input" id="rIsland" required placeholder="e.g. Hulhumalé" aria-label="Island"></div>
             </div>
             <div class="field"><label class="f" for="rAddress">Workshop or shop address <small>(optional)</small></label><input class="input" id="rAddress"></div>
             <div class="field"><span class="f">Other atolls you cover</span>
@@ -716,8 +725,8 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
           </div>
         </form>
         <div class="done-box" id="regDone" hidden>
-          <h2>Submitted for review</h2>
-          <p>Thanks. An admin will check your details, and your listing goes live once it’s approved.</p>
+          <h2 id="doneTitle">Submitted for review</h2>
+          <p id="doneText">Thanks. An admin will check your details, and your listing goes live once it’s approved.</p>
           <p style="margin-top:12px">Your reference: <code id="regRef"></code></p>
           <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn" id="toDash">Go to my workspace</button>
@@ -793,7 +802,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
     <div class="field"><label class="f" for="jD">Details <small>(optional)</small></label><textarea class="input" id="jD" maxlength="600" placeholder="What happened, any error codes, what you’ve already tried."></textarea></div>
     <div class="grid2">
       <div class="field"><label class="f" for="jA">Atoll</label><select class="input" id="jA"></select></div>
-      <div class="field"><label class="f" for="jI">Island or location</label><input class="input" id="jI" placeholder="e.g. Maafushi jetty"></div>
+      <div class="field"><label class="f" for="jISel">Island</label><input class="input" id="jI" placeholder="e.g. Maafushi" aria-label="Island"></div>
     </div>
     <div class="field"><span class="f">How urgent?</span>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
@@ -923,6 +932,54 @@ const SEED_JOBS = [
   {id:"j2",title:"VHF radio not transmitting",category:"navcom",boatType:"Dhoni",engine:"Icom IC-M330",description:"Receives fine, no transmit. Antenna cable may be damaged.",atoll:"Baa",island:"Eydhafushi",urgency:"week",name:"Sample request",phone:"7000202",status:"open",createdAt:now-2*day},
   {id:"j3",title:"Quote for antifouling and haul-out, 18 m safari boat",category:"haulout",boatType:"Safari boat or yacht",engine:"",description:"Looking for slipway availability in January.",atoll:"Malé City",island:"Malé",urgency:"flexible",name:"Sample request",phone:"7000203",status:"open",createdAt:now-6*day}
 ];
+
+/* ============ ISLANDS BY ATOLL ============ */
+const ISLANDS = {
+  "Malé City":["Malé","Hulhumalé","Vilimalé","Hulhulé","Thilafushi","Gulhifalhu"],
+  "Haa Alif":["Baarah","Dhihdhoo","Filladhoo","Hoarafushi","Ihavandhoo","Kelaa","Maarandhoo","Molhadhoo","Muraidhoo","Thakandhoo","Thuraakunu","Uligamu","Utheemu","Vashafaru"],
+  "Haa Dhaalu":["Faridhoo","Finey","Hanimaadhoo","Hirimaradhoo","Kulhudhuffushi","Kumundhoo","Kunburudhoo","Kurinbi","Maavaidhoo","Makunudhoo","Naivaadhoo","Nellaidhoo","Neykurendhoo","Nolhivaram","Nolhivaranfaru","Vaikaradhoo"],
+  "Shaviyani":["Bileffahi","Feevah","Feydhoo","Firubaidhoo","Foakaidhoo","Funadhoo","Goidhoo","Kanditheemu","Komandoo","Lhaimagu","Maakandoodhoo","Maaungoodhoo","Maroshi","Milandhoo","Narudhoo","Noomaraa"],
+  "Noonu":["Fodhdhoo","Hebadhoo","Holhudhoo","Kedhikolhudhoo","Kudafari","Landhoo","Lhohi","Maafaru","Maalhendhoo","Magoodhoo","Manadhoo","Miladhoo","Velidhoo"],
+  "Raa":["Alifushi","Angolhitheemu","Dhuvaafaru","Fainu","Hulhudhuffaaru","Iguraidhoo","Innamaadhoo","Kinolhas","Maakurathu","Maduvvari","Meedhoo","Rasgetheemu","Rasmaadhoo","Ungoofaaru","Vaadhoo"],
+  "Baa":["Dharavandhoo","Dhonfanu","Eydhafushi","Fehendhoo","Fulhadhoo","Goidhoo","Hithaadhoo","Kamadhoo","Kendhoo","Kihaadhoo","Kudarikilu","Maalhos","Thulhaadhoo"],
+  "Lhaviyani":["Hinnavaru","Kurendhoo","Maafilaafushi","Naifaru","Olhuvelifushi"],
+  "Kaafu":["Dhiffushi","Gaafaru","Gulhi","Guraidhoo","Himmafushi","Huraa","Kaashidhoo","Maafushi","Thulusdhoo"],
+  "Alif Alif":["Bodufolhudhoo","Feridhoo","Himandhoo","Maalhos","Mathiveri","Rasdhoo","Thoddoo","Ukulhas"],
+  "Alif Dhaalu":["Dhangethi","Dhiddhoo","Dhigurah","Fenfushi","Hangnaameedhoo","Kunburudhoo","Maamigili","Mahibadhoo","Mandhoo","Omadhoo"],
+  "Vaavu":["Felidhoo","Fulidhoo","Keyodhoo","Rakeedhoo","Thinadhoo"],
+  "Meemu":["Dhiggaru","Kolhufushi","Maduvvari","Madifushi","Mulah","Muli","Naalaafushi","Raiymandhoo","Veyvah"],
+  "Faafu":["Bileddhoo","Dharanboodhoo","Feeali","Magoodhoo","Nilandhoo"],
+  "Dhaalu":["Bandidhoo","Gemendhoo","Hulhudheli","Kudahuvadhoo","Maaenboodhoo","Meedhoo","Rinbudhoo","Vaanee"],
+  "Thaa":["Buruni","Dhiyamigili","Gaadhiffushi","Guraidhoo","Hirilandhoo","Kandoodhoo","Kinbidhoo","Madifushi","Omadhoo","Thimarafushi","Vandhoo","Veymandoo","Vilufushi"],
+  "Laamu":["Dhanbidhoo","Fonadhoo","Gaadhoo","Gan","Hithadhoo","Isdhoo","Kalaidhoo","Kunahandhoo","Maabaidhoo","Maamendhoo","Maavah","Mundoo"],
+  "Gaafu Alif":["Dhaandhoo","Dhevvadhoo","Dhiyadhoo","Gemanafushi","Kanduhulhudhoo","Kolamaafushi","Kondey","Maamendhoo","Nilandhoo","Viligili"],
+  "Gaafu Dhaalu":["Faresmaathodaa","Fiyoaree","Gadhdhoo","Hoandedhoo","Madaveli","Nadallaa","Rathafandhoo","Thinadhoo","Vaadhoo"],
+  "Fuvahmulah":["Fuvahmulah"],
+  "Addu City":["Feydhoo","Gan","Hithadhoo","Hulhudhoo","Maradhoo","Maradhoo-Feydhoo","Meedhoo"]
+};
+const OTHER = "__other";
+/* The text input (#rIsland, #jI) stays the real value; the select in front of it fills it in. */
+function fillIslands(atollId, inputId, keep){
+  const sel = $("#"+inputId+"Sel"), inp = $("#"+inputId), list = ISLANDS[$("#"+atollId).value] || [];
+  const cur = keep ? inp.value.trim() : "";
+  if(!list.length){ sel.hidden = true; inp.hidden = false; inp.placeholder = $("#"+atollId).value ? "Type the island" : "Choose the atoll first"; if(!keep) inp.value = ""; return; }
+  sel.hidden = false;
+  sel.innerHTML = `<option value="" disabled>Choose island</option>` + list.map(i=>`<option>${esc(i)}</option>`).join("") + `<option value="${OTHER}">Other (type it)</option>`;
+  const hit = list.find(i => i.toLowerCase()===cur.toLowerCase());
+  if(hit){ sel.value = hit; inp.value = hit; inp.hidden = true; }
+  else if(cur){ sel.value = OTHER; inp.hidden = false; }
+  else { sel.value = list.length===1 ? list[0] : ""; inp.value = sel.value; inp.hidden = true; }
+}
+function setupIslandPicker(atollId, inputId){
+  const inp = $("#"+inputId), sel = document.createElement("select");
+  sel.className = "input"; sel.id = inputId+"Sel"; sel.setAttribute("aria-label", "Island"); sel.hidden = true;
+  inp.before(sel); inp.hidden = false; inp.placeholder = "Choose the atoll first";
+  $("#"+atollId).addEventListener("change", () => fillIslands(atollId, inputId, false));
+  sel.addEventListener("change", () => {
+    if(sel.value===OTHER){ inp.value = ""; inp.hidden = false; inp.placeholder = "Type the island or place"; inp.focus(); }
+    else { inp.value = sel.value; inp.hidden = true; }
+  });
+}
 
 /* ============ HELPERS ============ */
 const $ = (s, r=document) => r.querySelector(s);
@@ -1290,6 +1347,7 @@ function setupJobs(){
   $("#jC").innerHTML = opts(CATS,"Choose a service");
   $("#jB").innerHTML = opts(BOATS,"Choose boat type");
   $("#jA").innerHTML = opts(ATOLLS,"Choose atoll");
+  setupIslandPicker("jA","jI");
   $("#jAtoll").onchange = renderJobs; $("#jCat").onchange = renderJobs;
   $("#postJobBtn").onclick = () => openJobDlg({type:"board"});
   $("#heroPost").onclick = () => openJobDlg({type:"board"});
@@ -1348,7 +1406,7 @@ function renderBiz(){
   $("#adminNote").hidden = !(u && !mine && !editingId && isAdminUser());
   if(!u){
     $("#bizTitle").textContent = "List your marine business";
-    $("#bizLede").textContent = "Freelance engineers, workshops, parts shops and marine companies can list for free. Create an account to register, then sign in any time to update your listing.";
+    $("#bizLede").textContent = "Freelance engineers, workshops, parts shops and marine companies can list here" + (SUB.enabled && SUB.freeDays ? `, free for the first ${SUB.freeDays} days` : "") + ". Create an account to register, then sign in any time to update your listing.";
     $("#demoHint").hidden = Auth.cloud; paintAuth(); return;
   }
   if(mine && !editingId){
@@ -1356,7 +1414,7 @@ function renderBiz(){
     renderWs(); loadSub().then(wsCounts); if(liveOff.length) return; loadWs().then(()=>{ renderWs(); startLive(); }).catch(e=>toast("Couldn’t load your workspace: "+e.message)); return;
   }
   if(editingId){ $("#bizTitle").textContent = "Edit listing"; $("#bizLede").textContent = "Changes show on the public directory as soon as you save."; }
-  else { $("#bizTitle").textContent = "Register your business"; $("#bizLede").textContent = "Every listing is checked by an admin before it goes live."; }
+  else { $("#bizTitle").textContent = "Register your business"; $("#bizLede").textContent = SUB.autoApprove !== false ? (SUB.enabled && SUB.freeDays ? `Your listing goes live as soon as you submit, with a ${SUB.freeDays}-day free period.` : "Your listing goes live as soon as you submit.") : "Every listing is checked by an admin before it goes live."; }
   if(!$("#regDone").hidden) return;
   $("#regCancel").hidden = !editingId;
   paintStep();
@@ -1437,7 +1495,7 @@ function fillForm(p){
   const r = $(`#regForm input[name=ptype][value="${p.type}"]`); if(r) r.checked = true;
   const set = (id,v) => $("#"+id).value = v ?? "";
   set("rName",p.name); set("rOwner",p.owner); set("rRegNo",p.regNo); set("rYears",p.years||""); set("rAbout",p.about);
-  set("rCerts",p.certs); set("rHours",p.hours); set("rAtoll",p.atoll); set("rIsland",p.island); set("rAddress",p.address);
+  set("rCerts",p.certs); set("rHours",p.hours); set("rAtoll",p.atoll); set("rIsland",p.island); fillIslands("rAtoll","rIsland",true); set("rAddress",p.address);
   set("rPhone",p.phone); set("rWhatsapp",p.whatsapp); set("rViber",p.viber); set("rEmail",p.email);
   $("#rWaAlerts").checked = p.waAlerts !== false;
   $("#rMobile").checked = !!p.mobileService; $("#rEmergency").checked = !!p.emergency;
@@ -1447,13 +1505,14 @@ function fillForm(p){
   $$("#rCoverage input").forEach(i => { i.checked = !all && (p.coverage||[]).includes(i.value); i.disabled = all; });
   $("#rAgree").checked = true;
 }
-function resetRegForm(){ $("#regForm").reset(); $$("#rCoverage input").forEach(i=>i.disabled=false); step = 0; }
+function resetRegForm(){ $("#regForm").reset(); fillIslands("rAtoll","rIsland",false); $$("#rCoverage input").forEach(i=>i.disabled=false); step = 0; }
 
 function setupRegister(){
   $("#typePick").innerHTML = Object.entries(TYPES).map(([k,[t,d]],i)=>`<label><input type="radio" name="ptype" value="${k}"${i===0?" checked":""}><b>${t}</b><span>${d}</span></label>`).join("");
   $("#rCats").innerHTML = catCheckboxes(new Set());
   $("#rBrands").innerHTML = BRANDS.map(b=>`<label class="check"><input type="checkbox" value="${esc(b)}"> ${esc(b)}</label>`).join("");
   $("#rAtoll").innerHTML = opts(ATOLLS,"Choose atoll");
+  setupIslandPicker("rAtoll","rIsland");
   $("#rCoverage").innerHTML = ATOLLS.map(a=>`<label class="check"><input type="checkbox" value="${esc(a)}"> ${esc(a)}</label>`).join("");
   $("#rAll").onchange = e => $$("#rCoverage input").forEach(i => { i.disabled = e.target.checked; });
   $("#regNext").onclick = nextStep;
@@ -1487,7 +1546,7 @@ function validate(d){
   if(step===0){ if(d.name.length<3) return "Enter your business or full name."; }
   if(step===1){ if(!d.categories.length) return "Pick at least one service."; }
   if(step===2){
-    if(!d.atoll) return "Choose your base atoll."; if(!d.island) return "Enter your island.";
+    if(!d.atoll) return "Choose your base atoll."; if(!d.island) return "Choose your island, or pick Other and type it.";
     if(!validPhone(d.phone)) return "Enter a 7-digit Maldivian phone number.";
     if(d.whatsapp && !validPhone(d.whatsapp)) return "Check the WhatsApp number.";
     if(d.viber && !validPhone(d.viber)) return "Check the Viber number.";
@@ -1513,9 +1572,14 @@ async function nextStep(){
       renderDir(); renderBiz(); window.scrollTo(0,0);
     } else {
       if(myListing()){ $("#regErr").textContent = "This account already has a listing."; btn.disabled=false; return; }
-      const rec = await Store.add("providers", {...d, ownerUid:Auth.user.uid, ownerEmail:Auth.user.email, status:"pending", verified:false, paused:false, reviews:[], createdAt:Date.now()});
+      const live = SUB.autoApprove !== false;
+      const rec = await Store.add("providers", {...d, ownerUid:Auth.user.uid, ownerEmail:Auth.user.email, status: live ? "approved" : "pending", verified:false, paused:false, reviews:[], createdAt:Date.now()});
       state.providers.push(rec);
       $("#regRef").textContent = rec.id.toUpperCase();
+      $("#doneTitle").textContent = live ? "Your listing is live" : "Submitted for review";
+      $("#doneText").textContent = live
+        ? (SUB.enabled ? `Customers can find you now. Your ${SUB.freeDays}-day free period has started; you can buy a plan any time from the Subscription tab.` : "Customers can find you now, and you can take jobs from the request board.")
+        : "Thanks. An admin will check your details, and your listing goes live once it’s approved.";
       $("#regForm").hidden = true; $("#regDone").hidden = false;
       $$("#steps li").forEach(li=>li.className="done");
       updateAcctBtn();
@@ -1615,9 +1679,14 @@ function wsCounts(){
   });
   const total = me ? newN + slipN + accN + subN : 0;
   const strip = $("#wsSubStrip");
-  if(me && SUB.enabled){ const i = subInfo(me);
-    strip.innerHTML = `<div class="substrip ${i.cls}"><span><b>${esc(i.title)}</b>${i.days ? ` <span class="sd">${esc(i.days)}</span>` : ""}</span><button class="btn small${i.expired||i.soon?"":" ghost"}" data-act="goSub">${i.expired ? "Renew now" : i.soon ? "Renew" : "View plans"}</button></div>`;
-    strip.hidden = false;
+  if(me){
+    let h = "";
+    if(SUB.enabled){ const i = subInfo(me);
+      h += `<div class="substrip ${i.cls}"><span><b>${esc(i.title)}</b>${i.days ? ` <span class="sd">${esc(i.days)}</span>` : ""}</span><button class="btn small${i.expired||i.soon?"":" ghost"}" data-act="goSub">${i.expired ? "Renew now" : i.soon ? "Renew" : "View plans"}</button></div>`; }
+    const on = me.waAlerts !== false, num = fmtPhone(me.whatsapp || me.phone);
+    h += `<div class="alertstrip${on?" on":""}"><span><b>WhatsApp job alerts: ${on?"On":"Off"}</b> <span class="sd">${on ? "New requests for your services are sent to "+esc(num) : "You won’t get WhatsApp messages about new requests"}</span></span>
+      <button type="button" class="switch" role="switch" aria-checked="${on}" aria-label="WhatsApp job alerts" data-act="toggleWa"><span></span></button></div>`;
+    strip.innerHTML = h; strip.hidden = false;
   } else strip.hidden = true;
   $("#navBiz").innerHTML = esc(Auth.user && myListing() ? "Workspace" : "List your business") + (total ? `<span class="navcount">${total}</span>` : "");
   document.title = (total ? `(${total}) ` : "") + BASE_TITLE;
@@ -1990,7 +2059,7 @@ function openJobDlg(mode){
   $("#jobSub").textContent = mode.type==="direct" ? `Goes only to ${p?.name||"this business"}` : mode.type==="manual" ? "For a customer who called or walked in" : "Providers will contact you directly";
   $("#jNL").textContent = mode.type==="manual" ? "Customer name" : "Your name";
   $("#jPH").textContent = mode.type==="board" ? "Shown on the request board so providers can call you." : mode.type==="manual" ? "Used to send quotations and invoices on WhatsApp." : "Shared only with this business.";
-  $("#jobErr").textContent = ""; $("#jobDlg").showModal();
+  $("#jobErr").textContent = ""; fillIslands("jA","jI",true); $("#jobDlg").showModal();
 }
 async function quoteFromJob(jobId){
   if(!state.ws.loaded) await loadWs();
@@ -2159,6 +2228,14 @@ document.addEventListener("click", async e => {
     releaseJob: () => releaseJob(id),
     saveProgress: () => saveProgress(id),
     track: () => openTrack(),
+    toggleWa: async () => {
+      const me = myListing(); if(!me) return;
+      const on = me.waAlerts === false;
+      t.disabled = true;
+      await Store.update("providers", me.id, {waAlerts:on}); me.waAlerts = on;
+      toast(on ? "WhatsApp job alerts turned on" : "WhatsApp job alerts turned off"); wsCounts();
+      if(state.ws.tab==="listing") renderDash(me);
+    },
     goSub: () => { state.ws.tab = "sub"; state.ws.subLoaded = false; renderWs(); },
     alerts: async () => { try { const r = await Notification.requestPermission(); toast(r==="granted" ? "Alerts on. You’ll get a notification when this tab is in the background." : "Alerts not turned on."); renderWs(); } catch { toast("This browser doesn’t support alerts."); } },
     reqQuote: () => { $("#provDlg").close(); openJobDlg({type:"direct", providerId:id}); },
@@ -2293,7 +2370,7 @@ async function renderCustomerJob(id){
     ${j.status==="open" ? `<p class="hint" style="margin-top:14px">When a business takes it, this page shows who is handling it, their progress, and any quotation or invoice. Businesses may also call you on ${esc(fmtPhone(j.phone))}.</p>` : ""}</div>`;
 }
 /* ============ SUBSCRIPTIONS ============ */
-const SUB_DEFAULT = {enabled:false, freeDays:30, currency:"MVR", plans:[{id:"monthly",name:"Monthly",days:30,price:300,discount:0},{id:"yearly",name:"Yearly",days:365,price:3600,discount:15}], banks:[], note:""};
+const SUB_DEFAULT = {enabled:false, autoApprove:true, freeDays:30, currency:"MVR", plans:[{id:"monthly",name:"Monthly",days:30,price:300,discount:0},{id:"yearly",name:"Yearly",days:365,price:3600,discount:15}], banks:[], note:""};
 const planPrice = pl => Math.round((+pl.price||0) * (1 - Math.min(90, Math.max(0, +pl.discount||0))/100) * 100) / 100;
 let SUB = structuredClone(SUB_DEFAULT);
 async function loadSub(){ try { const c = await Store.get("config","subscription"); if(c){ SUB = {...SUB_DEFAULT, ...c}; delete SUB.id; } } catch {} }
@@ -2304,7 +2381,7 @@ const subActive = p => !SUB.enabled || subEnd(p) > Date.now();
 const durLabel = d => d%365===0 ? (d/365===1 ? "1 year" : d/365+" years") : d%30===0 ? (d/30===1 ? "1 month" : d/30+" months") : d+" days";
 function subInfo(p, force){
   if(!SUB.enabled && !force) return {cls:"live", title:"Free listing", text:"Listings are free right now. There is nothing to pay.", short:"Free", days:""};
-  if(p.status!=="approved") return {cls:"pending", title:"Starts when approved", text:`Your ${SUB.freeDays}-day free period starts the day an admin approves your listing.`, short:"Not started", days:`${SUB.freeDays} free days after approval`};
+  if(p.status!=="approved") return {cls:"pending", title:"Starts when approved", text:`Your ${SUB.freeDays}-day free period starts once your listing is live.`, short:"Not started", days:`${SUB.freeDays} free days after approval`};
   const end = subEnd(p), left = Math.ceil((end-Date.now())/day), paid = (+p.subUntil||0) > trialEnd(p), days = `${left} day${left===1?"":"s"} left`;
   if(left<=0) return {cls:"rejected", title:"Subscription expired", text:`Your listing has been hidden from customers since ${fmtMs(end)}. Buy a plan to show it again.`, short:"Expired "+fmtMs(end), days:"0 days left", left:0, expired:true};
   if(paid) return {cls:left<=7?"pending":"live", title:`Subscribed until ${fmtMs(end)}`, text:days+"."+(left<=7?" Renew now to stay visible.":""), short:"Subscribed until "+fmtMs(end), days, left, soon:left<=7};
@@ -2385,9 +2462,10 @@ function renderSubCfg(){
   const L = $("#adminList");
   L.innerHTML = `<form class="panel" id="subCfgForm" novalidate>
     <h3 style="font-size:22px;margin-bottom:12px">Subscription settings</h3>
+    <label class="check" style="margin-bottom:10px"><input type="checkbox" id="scAuto"${SUB.autoApprove!==false?" checked":""}> <span><b>New businesses go live straight away</b><br><span class="hint">No waiting for approval: the free period starts when they register. You can still unlist or delete any listing. Turn off to check every new listing first.</span></span></label>
     <label class="check" style="margin-bottom:14px"><input type="checkbox" id="scOn"${SUB.enabled?" checked":""}> <span><b>Businesses need a subscription to stay listed</b><br><span class="hint">When this is off, every approved listing is free and visible.</span></span></label>
     <div class="grid2">
-      <div class="field"><label class="f" for="scFree">Free period for new businesses (days)</label><input class="input" id="scFree" type="number" min="0" value="${esc(SUB.freeDays)}"><p class="hint">Counted from the day you approve a listing. Use 0 for no free period.</p></div>
+      <div class="field"><label class="f" for="scFree">Free period for new businesses (days)</label><input class="input" id="scFree" type="number" min="0" value="${esc(SUB.freeDays)}"><p class="hint">Counted from registration (or from your approval, if you check listings first). Use 0 for no free period.</p></div>
       <div class="field"><label class="f" for="scCur">Currency</label><select class="input" id="scCur"><option${SUB.currency!=="USD"?" selected":""}>MVR</option><option${SUB.currency==="USD"?" selected":""}>USD</option></select></div>
     </div>
     <h3 class="sub-h">Plans</h3>
@@ -2409,7 +2487,7 @@ function renderSubCfg(){
     const plans = $$("#planRows .plan-row").map(r => Object.fromEntries($$("[data-p]",r).map(i=>[i.dataset.p, i.value.trim()]))).filter(p=>p.name||p.days||p.price)
       .map(p=>({id:p.id || slug(p.name)+"-"+uid().slice(-4), name:p.name, days:Math.round(+p.days), price:+p.price, discount:Math.min(90, Math.max(0, Math.round(+p.discount||0)))}));
     const banks = $$("#scBanks .bank-row").map(r => Object.fromEntries($$("[data-b]",r).map(i=>[i.dataset.b, i.value.trim()]))).filter(b=>b.bank||b.number||b.name);
-    const cfg = {enabled:$("#scOn").checked, freeDays:Math.max(0, Math.round(+$("#scFree").value||0)), currency:$("#scCur").value, plans, banks, note:$("#scNote").value.trim(), updatedAt:Date.now()};
+    const cfg = {autoApprove:$("#scAuto").checked, enabled:$("#scOn").checked, freeDays:Math.max(0, Math.round(+$("#scFree").value||0)), currency:$("#scCur").value, plans, banks, note:$("#scNote").value.trim(), updatedAt:Date.now()};
     if(plans.some(p=>!p.name || !(p.days>0) || !(p.price>=0) || isNaN(p.price))) return err.textContent = "Every plan needs a name, a number of days and a price.";
     if(banks.some(b=>!b.bank || !b.name || !/^[\d\s-]{6,24}$/.test(b.number))) return err.textContent = "Each bank account needs a bank, an account name and a valid account number.";
     if(cfg.enabled && !plans.length) return err.textContent = "Add at least one plan before turning subscriptions on.";
