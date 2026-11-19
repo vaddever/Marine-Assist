@@ -18,7 +18,7 @@
  *  6. Optional: add a daily time trigger for cleanupOldKeys().
  */
 
-const SCRIPT_VERSION = '2026-11-18b';   // shown when you open the web app URL: tells you which version is deployed
+const SCRIPT_VERSION = '2026-11-19';   // shown when you open the web app URL: tells you which version is deployed
 
 const CFG = {
   PROJECT_ID: 'marine-assist-ae874',
@@ -30,7 +30,8 @@ const CFG = {
   COUNTRY_CODE: '960',
   MAX_AGE_MIN: 120,        // ignore requests older than this (stops re-sending old jobs)
   MAX_PER_REQUEST: 25,     // most businesses alerted for one request
-  MAX_PER_DAY: 300         // safety cap on messages per day (controls cost)
+  MAX_PER_DAY: 300,        // safety cap on messages per day (controls cost)
+  MAX_PER_BUSINESS_DAY: 15 // most alerts one business can get per day (stops spam if someone floods the board)
 };
 
 /* ---------------- web app entry ---------------- */
@@ -61,7 +62,12 @@ function doPost(e) {
 }
 function doGet(e) {
   const q = (e && e.parameter) || {};
-  if (q.job) return out(diagnoseJob(String(q.job)));     // open  <web app URL>?job=JOB_ID  to see who would get the alert
+  // Open <web app URL>?job=JOB_ID&key=YOUR_DIAG_KEY to see who would get the alert (DIAG_KEY is a Script Property you choose)
+  if (q.job) {
+    const k = PropertiesService.getScriptProperties().getProperty('DIAG_KEY');
+    if (!k || String(q.key || '') !== k) return out({ ok: false, error: 'Add DIAG_KEY in Script Properties and pass it as &key=' });
+    return out(diagnoseJob(String(q.job).slice(0, 64)));
+  }
   return out({ ok: true, service: 'Marine Assist alerts', version: SCRIPT_VERSION, template: CFG.TEMPLATE, language: CFG.LANG,
     tokenSet: !!PropertiesService.getScriptProperties().getProperty('WA_TOKEN'), phoneIdSet: !!PropertiesService.getScriptProperties().getProperty('WA_PHONE_ID') });
 }
@@ -109,6 +115,7 @@ function alertForJob(jobId) {
   let sent = 0, failed = 0;
   providers.slice(0, CFG.MAX_PER_REQUEST).forEach(p => {
     if (!underDailyCap()) return;
+    if (!businessUnderCap(p.id)) return;
     const r = sendTemplate(waNumber(p), [label, where, job.title, link]);
     r.ok ? sent++ : failed++;
   });
@@ -124,6 +131,7 @@ function alertForCase(caseId) {
   if (!p || p.status !== 'approved' || p.paused || p.waAlerts === false) return 'provider not alertable';
   if (!subscribed(p, fsGet('config/subscription'))) return 'provider subscription expired';
   if (!underDailyCap()) return 'daily cap reached';
+  if (!businessUnderCap(p.id)) return 'business daily cap reached';
   const where = [c.island, c.atoll].filter(String).join(', ') || 'the Maldives';
   const r = sendTemplate(waNumber(p), [categoryLabel(c.category), where, c.title, CFG.SITE_URL + '#register']);
   return { sent: r.ok ? 1 : 0, failed: r.ok ? 0 : 1 };
@@ -155,6 +163,14 @@ function categoryLabel(id) {
   return id || 'service';
 }
 function isRecent(ms) { return typeof ms === 'number' && Date.now() - ms < CFG.MAX_AGE_MIN * 60000; }
+function businessUnderCap(pid) {
+  const props = PropertiesService.getScriptProperties();
+  const key = 'biz_' + Utilities.formatDate(new Date(), 'Indian/Maldives', 'yyyy-MM-dd') + '_' + pid;
+  const n = Number(props.getProperty(key) || 0);
+  if (n >= CFG.MAX_PER_BUSINESS_DAY) return false;
+  props.setProperty(key, String(n + 1));
+  return true;
+}
 function underDailyCap() {
   const props = PropertiesService.getScriptProperties();
   const key = 'day_' + Utilities.formatDate(new Date(), 'Indian/Maldives', 'yyyy-MM-dd');
@@ -192,9 +208,15 @@ function sendTemplate(to, params) {
 function clean(t) { return (String(t == null ? '' : t).replace(/[\r\n\t]+/g, ' ').replace(/ {4,}/g, '   ').trim().slice(0, 300)) || '-'; }
 
 /* ---------------- Firestore REST (read-only, public rules) ---------------- */
+// If you enforce App Check on Firestore, set Script Property USE_OAUTH = 1 and add the datastore scope (see setup notes)
+function fsOpts() {
+  const o = { muteHttpExceptions: true };
+  if (PropertiesService.getScriptProperties().getProperty('USE_OAUTH') === '1') o.headers = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
+  return o;
+}
 function fsBase() { return 'https://firestore.googleapis.com/v1/projects/' + CFG.PROJECT_ID + '/databases/(default)/documents/'; }
 function fsGet(path) {
-  const r = UrlFetchApp.fetch(fsBase() + path + (CFG.API_KEY ? '?key=' + CFG.API_KEY : ''), { muteHttpExceptions: true });
+  const r = UrlFetchApp.fetch(fsBase() + path + (CFG.API_KEY ? '?key=' + CFG.API_KEY : ''), fsOpts());
   if (r.getResponseCode() !== 200) return null;
   return fromDoc(JSON.parse(r.getContentText()));
 }
@@ -202,7 +224,7 @@ function fsList(col) {
   const out = []; let token = '';
   do {
     const url = fsBase() + col + '?pageSize=300' + (CFG.API_KEY ? '&key=' + CFG.API_KEY : '') + (token ? '&pageToken=' + encodeURIComponent(token) : '');
-    const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const r = UrlFetchApp.fetch(url, fsOpts());
     if (r.getResponseCode() !== 200) throw new Error('Firestore list failed: ' + r.getContentText());
     const j = JSON.parse(r.getContentText());
     (j.documents || []).forEach(d => out.push(fromDoc(d)));
@@ -248,6 +270,7 @@ function cleanupOldKeys() {
   const props = PropertiesService.getScriptProperties(), all = props.getProperties(), week = 7 * 864e5;
   Object.keys(all).forEach(k => {
     if (k.startsWith('sent_') && Date.now() - Number(all[k]) > week) props.deleteProperty(k);
+    if (k.startsWith('biz_') && k.slice(4, 14) < Utilities.formatDate(new Date(Date.now() - week), 'Indian/Maldives', 'yyyy-MM-dd')) props.deleteProperty(k);
     if (k.startsWith('day_') && k < 'day_' + Utilities.formatDate(new Date(Date.now() - week), 'Indian/Maldives', 'yyyy-MM-dd')) props.deleteProperty(k);
   });
 }

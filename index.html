@@ -295,6 +295,8 @@ footer b{color:var(--hull-ink)}
 .bank code{font-size:17px;letter-spacing:.03em}
 .bank-row{display:grid;grid-template-columns:1.2fr 1.3fr 1.3fr 100px 44px;gap:8px;margin-bottom:8px;align-items:end}
 .cdoc{margin-bottom:16px}
+.privacy h3{font-size:18px;margin:16px 0 4px}
+.privacy p{max-width:65ch}
 .plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
 .plan{display:block;border:1.5px solid var(--line);border-radius:8px;padding:14px;cursor:pointer;background:var(--surface)}
 .plan input{position:absolute;opacity:0}
@@ -581,7 +583,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
   <div class="page-head"><div class="wrap">
     <h1>Request board</h1>
     <p>Describe the problem with your boat and where it is. A business takes your request, then keeps you updated with progress, quotations and invoices.</p>
-    <div class="actions"><button class="btn signal" id="postJobBtn">Post a request</button><button class="btn on-dark" data-act="track">Track my request</button></div>
+    <div class="actions"><button class="btn signal" id="postJobBtn">Post a request</button><button class="btn on-dark" data-act="track">My requests</button></div>
     <p class="hint" style="color:var(--hull-muted);margin-top:14px">Run a marine business? <a href="#register" data-go="register" style="color:var(--signal)">Sign in</a> to take jobs from this board and manage them.</p>
   </div></div>
   <div class="wrap section">
@@ -716,7 +718,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
             <h2>Check and submit</h2>
             <p class="sub">Make sure everything is right. You can edit your listing any time after signing in.</p>
             <div class="summary" id="regSummary"></div>
-            <label class="check" style="margin-top:20px"><input type="checkbox" id="rAgree"> I confirm these details are accurate and I’m allowed to list this business.</label>
+            <label class="check" style="margin-top:20px"><input type="checkbox" id="rAgree"> I confirm these details are accurate, I’m allowed to list this business, and I agree to the <a href="#" data-act="privacy">privacy notice and terms</a>.</label>
           </fieldset>
           <p class="err" id="regErr" role="alert"></p>
           <div class="reg-nav">
@@ -785,7 +787,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
 
 <footer><div class="wrap">
   <p><b>Marine Assist</b> marine services and billing for the Maldives.</p>
-  <p>Run a marine business? <a href="#register" data-go="register" style="color:var(--signal)">List it for free</a>.</p>
+  <p>Run a marine business? <a href="#register" data-go="register" style="color:var(--signal)">List it here</a>. · <a href="#" data-act="privacy" style="color:var(--hull-ink)">Privacy and terms</a></p>
 </div></footer>
 
 <dialog id="provDlg" aria-labelledby="provTitle"></dialog>
@@ -815,6 +817,7 @@ dialog.wide{width:min(940px,calc(100vw - 24px))}
       <div class="field"><label class="f" for="jN" id="jNL">Your name</label><input class="input" id="jN"></div>
       <div class="field"><label class="f" for="jP">Phone</label><input class="input" id="jP" inputmode="tel" placeholder="7-digit number"><p class="hint" id="jPH">Shown on the request board so providers can call you.</p></div>
     </div>
+    <p class="hint">By sending, you agree to the <a href="#" data-act="privacy">privacy notice</a>. Your name and phone are shared only with the business handling your request.</p>
     <p class="err" id="jobErr" role="alert"></p>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
       <button type="button" class="btn ghost" data-close>Cancel</button>
@@ -859,6 +862,10 @@ const CONFIG = {
   // Set firebase: null to go back to demo mode (sample data, saved in this browser only).
   adminPin: "2468",
   adminEmails: ["vaddever@gmail.com"],
+  // Optional anti-abuse: reCAPTCHA v3 site key for Firebase App Check (see setup notes). Leave "" to skip.
+  appCheckSiteKey: "",
+  // Shown in the privacy notice for data requests
+  contactEmail: "vaddever@gmail.com",
   // WhatsApp job alerts: paste your Google Apps Script web app URL here (see marine-assist-alerts.gs). Leave "" to turn alerts off.
   alertsUrl: "https://script.google.com/macros/s/AKfycbz8KpbHhozIi3w0FPmvvg4iOXWmJqD0KU34ri6JYKxXoRdmk3Z7BlOyaPrc_HQf86hdmw/exec"
 };
@@ -992,7 +999,8 @@ const wa = (p, msg) => "https://wa.me/960" + digits(p) + (msg ? "?text=" + encod
 const viber = p => "viber://chat?number=%2B960" + digits(p);
 const fmtPhone = p => { const d = digits(p); return d.length===7 ? d.slice(0,3)+" "+d.slice(3) : d; };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
-const avg = p => { const r = p.reviews||[]; return r.length ? r.reduce((a,b)=>a+b.rating,0)/r.length : 0; };
+const stars = r => Math.max(0, Math.min(5, Math.round(+r) || 0));
+const avg = p => { const r = Array.isArray(p.reviews) ? p.reviews : []; return r.length ? r.reduce((a,b)=>a+stars(b.rating),0)/r.length : 0; };
 const coverageText = p => (p.coverage||[]).includes("ALL") ? "Whole country" : [p.atoll, ...(p.coverage||[]).filter(a=>a!==p.atoll)].join(", ");
 function ago(t){ const s=(Date.now()-t)/1000; if(s<3600) return Math.max(1,Math.round(s/60))+" min ago"; if(s<86400) return Math.round(s/3600)+" h ago"; const d=Math.round(s/86400); return d+(d===1?" day ago":" days ago"); }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,3200); }
@@ -1015,7 +1023,12 @@ const Store = (() => {
       await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
       await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js");
       await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js");
-      firebase.initializeApp(CONFIG.firebase); db = firebase.firestore(); return "cloud";
+      firebase.initializeApp(CONFIG.firebase);
+      if (CONFIG.appCheckSiteKey){
+        try { await loadScript("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"); firebase.appCheck().activate(CONFIG.appCheckSiteKey, true); }
+        catch(e){ console.warn("App Check not started", e); }
+      }
+      db = firebase.firestore(); return "cloud";
     }
     const SEED = {providers:SEED_PROVIDERS, jobs:SEED_JOBS, cases:SEED_CASES, docs:SEED_DOCS, slips:SEED_SLIPS};
     for (const [k,v] of Object.entries(SEED)) if (!read(k)) write(k, v);
@@ -1041,14 +1054,25 @@ const Store = (() => {
     window.addEventListener("storage", onStore); const t = setInterval(run, 5000); run();
     return () => { window.removeEventListener("storage", onStore); clearInterval(t); };
   }
-  return {init,list,add,update,remove,get,query,newId,set,claim,watch};
+  const DEL = {__del:true};
+  const fix = o => { if(!db) return o; const r = {}; for(const k in o) r[k] = o[k]===DEL ? firebase.firestore.FieldValue.delete() : o[k]; return r; };
+  async function update2(c,id,patch){
+    if(db) return update(c,id,fix(patch));
+    const a=read(c)||[]; const i=a.findIndex(x=>x.id===id); if(i>-1){ const n={...a[i],...patch}; for(const k in patch) if(patch[k]===DEL) delete n[k]; a[i]=n; write(c,a); }
+  }
+  // ops: [["set"|"update"|"delete", collectionPath, id, data]] – all or nothing in the cloud
+  async function batch(ops){
+    if(db){ const b = db.batch(); ops.forEach(([op,c,id,o]) => { const r = db.collection(c).doc(id); op==="set" ? b.set(r,fix(o)) : op==="update" ? b.update(r,fix(o)) : b.delete(r); }); await b.commit(); return; }
+    for(const [op,c,id,o] of ops){ if(op==="set") await set(c,id,o); else if(op==="update") await update2(c,id,o); else await remove(c,id); }
+  }
+  return {init,list,add,update:update2,remove,get,query,newId,set,claim,watch,batch,DEL};
 })();
 
 /* ============ ACCOUNTS (Firebase Auth or local demo) ============ */
 const Auth = (() => {
   let fb = null, user = null; const PFX = "marineassist_v1_";
-  const getAcc = () => { try { return JSON.parse(localStorage.getItem(PFX+"accounts")||"{}"); } catch { return {}; } };
-  const setAcc = a => { try { localStorage.setItem(PFX+"accounts", JSON.stringify(a)); } catch {} };
+  const getAcc = () => { try { return JSON.parse(localStorage.getItem(PFX+"logins")||"{}"); } catch { return {}; } };
+  const setAcc = a => { try { localStorage.setItem(PFX+"logins", JSON.stringify(a)); } catch {} };
   const setSession = u => { try { u ? localStorage.setItem(PFX+"session", JSON.stringify(u)) : localStorage.removeItem(PFX+"session"); } catch {} };
   async function hash(t){
     if(crypto?.subtle){ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("marineassist:"+t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
@@ -1063,8 +1087,8 @@ const Auth = (() => {
   async function init(mode){
     if(mode==="cloud"){
       fb = firebase.auth();
-      await new Promise(r => { const un = fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email} : null; un(); r(); }); });
-      fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email} : null; onAuthChange(); });
+      await new Promise(r => { const un = fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email,verified:u.emailVerified} : null; un(); r(); }); });
+      fb.onAuthStateChanged(u => { user = u ? {uid:u.uid,email:u.email,verified:u.emailVerified} : null; onAuthChange(); });
       fb.getRedirectResult().then(r => { if(r && r.user) afterSignIn("Signed in with Google"); }).catch(e => toast(MSG[e.code] || e.message));
       return;
     }
@@ -1074,14 +1098,14 @@ const Auth = (() => {
   }
   async function signUp(email, pw){
     email = email.trim().toLowerCase();
-    if(fb){ try { const c = await fb.createUserWithEmailAndPassword(email, pw); user = {uid:c.user.uid,email:c.user.email}; return user; } catch(e){ fail(e); } }
+    if(fb){ try { const c = await fb.createUserWithEmailAndPassword(email, pw); user = {uid:c.user.uid,email:c.user.email,verified:c.user.emailVerified}; return user; } catch(e){ fail(e); } }
     const acc = getAcc(); if(acc[email]) throw new Error(MSG["auth/email-already-in-use"]);
     acc[email] = {uid: "u_"+uid(), hash: await hash(pw)}; setAcc(acc);
     user = {uid: acc[email].uid, email}; setSession(user); return user;
   }
   async function signIn(email, pw){
     email = email.trim().toLowerCase();
-    if(fb){ try { const c = await fb.signInWithEmailAndPassword(email, pw); user = {uid:c.user.uid,email:c.user.email}; return user; } catch(e){ fail(e); } }
+    if(fb){ try { const c = await fb.signInWithEmailAndPassword(email, pw); user = {uid:c.user.uid,email:c.user.email,verified:c.user.emailVerified}; return user; } catch(e){ fail(e); } }
     const a = getAcc()[email]; if(!a || a.hash !== await hash(pw)) throw new Error(MSG["auth/invalid-credential"]);
     user = {uid:a.uid, email}; setSession(user); return user;
   }
@@ -1093,7 +1117,7 @@ const Auth = (() => {
   async function google(){
     if(!fb) throw new Error("Google sign-in works once Firebase is connected. In demo mode, use email and password.");
     const prov = new firebase.auth.GoogleAuthProvider(); prov.setCustomParameters({prompt:"select_account"});
-    try { const c = await fb.signInWithPopup(prov); user = {uid:c.user.uid, email:c.user.email}; return user; }
+    try { const c = await fb.signInWithPopup(prov); user = {uid:c.user.uid, email:c.user.email, verified:c.user.emailVerified}; return user; }
     catch(e){
       if(["auth/popup-closed-by-user","auth/cancelled-popup-request"].includes(e.code)) return null;
       if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment","auth/web-storage-unsupported"].includes(e.code)){ await fb.signInWithRedirect(prov); return null; }
@@ -1102,9 +1126,17 @@ const Auth = (() => {
   }
   return {init, signUp, signIn, signOut, reset, google, get user(){ return user; }, get cloud(){ return !!fb; }};
 })();
-const isAdminUser = () => Auth.cloud && Auth.user && CONFIG.adminEmails.map(e=>e.toLowerCase()).includes((Auth.user.email||"").toLowerCase());
+const isAdminUser = () => Auth.cloud && Auth.user && Auth.user.verified && CONFIG.adminEmails.map(e=>e.toLowerCase()).includes((Auth.user.email||"").toLowerCase());
 const myListing = () => Auth.user ? state.providers.find(p => p.ownerUid === Auth.user.uid) : null;
+async function migrateOwner(){
+  const me = myListing(); if(!me || !Auth.cloud) return;
+  try {
+    if(!(await Store.get("accounts", Auth.user.uid))) await Store.set("accounts", Auth.user.uid, {email:Auth.user.email||"", providerId:me.id, createdAt:Date.now()});
+    if(me.ownerEmail) { await Store.update("providers", me.id, {ownerEmail:Store.DEL}); delete me.ownerEmail; }
+  } catch(e){ console.warn("account migration", e); }
+}
 function onAuthChange(){
+  if(Auth.user) migrateOwner();
   if(!Auth.user) stopLive();
   updateAcctBtn();
   if(!$("#view-register").hidden) renderBiz();
@@ -1146,8 +1178,12 @@ async function refresh(){ [state.providers, state.jobs] = await Promise.all([Sto
 /* ============ NAVIGATION ============ */
 const VIEWS = ["find","requests","register","admin"];
 function show(view){
-  if(view && view.startsWith("j=")){ $$("dialog[open]").forEach(d=>d.close()); renderCustomerJob(decodeURIComponent(view.slice(2))); return; }
-  if(view && view.startsWith("c=")){ $$("dialog[open]").forEach(d=>d.close()); renderCustomerCase(decodeURIComponent(view.slice(2))); return; }
+  if(view && /^[jc]=/.test(view)){
+    $$("dialog[open]").forEach(d=>d.close());
+    const prm = new URLSearchParams(view), ok = v => /^[A-Za-z0-9_-]{1,64}$/.test(v||"") ? v : "";
+    if(view[0]==="j") renderCustomerJob(ok(prm.get("j")), ok(prm.get("k"))); else renderCustomerCase(ok(prm.get("c")));
+    return;
+  }
   if(!VIEWS.includes(view)) view = "find";
   $$(".view").forEach(v => v.hidden = v.id !== "view-"+view);
   $$(".nav button").forEach(b => b.dataset.view===view ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
@@ -1310,7 +1346,7 @@ function openProvider(id){
       </dl>
       <h3>Reviews</h3>
       <p>${ratingHTML(p)}</p>
-      ${reviews.map(r=>`<div class="review"><b>${esc(r.name)}</b> <span class="rating"><span class="star">${"★".repeat(r.rating)}</span></span><p>${esc(r.text)}</p><small>${ago(r.date)}</small></div>`).join("")}
+      ${reviews.map(r=>`<div class="review"><b>${esc(r.name)}</b> <span class="rating"><span class="star">${"★".repeat(stars(r.rating))}</span></span><p>${esc(r.text)}</p><small>${ago(r.date)}</small></div>`).join("")}
       <form id="revForm" class="panel" style="margin-top:16px;background:var(--surface-2)">
         <span class="f">Worked with ${esc(p.name)}? Leave a review</span>
         <div class="starpick" role="radiogroup" aria-label="Rating">
@@ -1355,20 +1391,27 @@ function setupJobs(){
     e.preventDefault();
     const job = {title:$("#jT").value.trim(),category:$("#jC").value,boatType:$("#jB").value,engine:$("#jE").value.trim(),
       description:$("#jD").value.trim(),atoll:$("#jA").value,island:$("#jI").value.trim(),
-      urgency:$("#jobForm input[name=urg]:checked").value,name:$("#jN").value.trim(),phone:digits($("#jP").value),status:"open",createdAt:Date.now()};
+      urgency:$("#jobForm input[name=urg]:checked").value,name:$("#jN").value.trim().slice(0,60),phone:digits($("#jP").value),status:"open",createdAt:Date.now()};
     const miss = [];
     if(job.title.length<5) miss.push("the problem"); if(!job.category) miss.push("a service"); if(!job.boatType) miss.push("boat type");
     if(!job.atoll) miss.push("atoll"); if(!job.island) miss.push("island"); if(!job.name) miss.push("your name");
     if(miss.length) return $("#jobErr").textContent = "Add "+miss.join(", ")+".";
     if(!validPhone(job.phone)) return $("#jobErr").textContent = "Enter a 7-digit Maldivian phone number.";
     try {
-      if(jobMode.type==="board"){ const n = await Store.add("jobs", job); state.jobs.push(n); $("#jobForm").reset(); $("#jobDlg").close(); renderJobs(); showJobPosted(n); notifyBusinesses("job", n.id); return; }
+      if(jobMode.type==="board"){
+        const wait = 60000 - (Date.now() - (+lsGet("lastPost") || 0));
+        if(wait > 0) return $("#jobErr").textContent = `Please wait ${Math.ceil(wait/1000)} seconds before posting another request.`;
+        const {name, phone, ...pub} = job, jid = Store.newId("jobs"), cid = Store.newId("cases");
+        await Store.batch([["set","jobs",jid,pub], ["set","jobs/"+jid+"/private","contact",{name, phone, caseId:cid}]]);
+        lsSet("lastPost", Date.now()); rememberRequest({jobId:jid, cid, title:pub.title, at:Date.now()});
+        state.jobs.push({id:jid, ...pub}); $("#jobForm").reset(); $("#jobDlg").close(); renderJobs(); showJobPosted({id:jid, ...pub}, cid); notifyBusinesses("job", jid); return;
+      }
       const prov = jobMode.type==="direct" ? state.providers.find(x=>x.id===jobMode.providerId) : myListing();
       const rec = await Store.add("cases", {providerId:prov.id, ownerUid:prov.ownerUid, source:jobMode.type, jobId:null, title:job.title, category:job.category, boatType:job.boatType,
         engine:job.engine, description:job.description, atoll:job.atoll, island:job.island, urgency:job.urgency, customer:{name:job.name, phone:job.phone}, closed:false, docIds:[], createdAt:Date.now()});
       $("#jobForm").reset(); $("#jobDlg").close();
       if(jobMode.type==="manual"){ state.ws.cases.push(rec); state.ws.tab="requests"; renderWs(); openCase(rec.id); toast("Job added"); }
-      else { showRequestSent(rec, prov); notifyBusinesses("case", rec.id); }
+      else { rememberRequest({cid:rec.id, title:rec.title, at:Date.now()}); showRequestSent(rec, prov); notifyBusinesses("case", rec.id); }
     }
     catch(err){ $("#jobErr").textContent = "Couldn’t post the request: "+err.message; }
   });
@@ -1390,8 +1433,7 @@ function renderJobs(){
       </div>
       <div class="job-side">
         <span class="badge ${uc}">${ul}</span>
-        <small style="color:var(--muted)">Posted by ${esc(j.name)}</small>
-        <div class="row-actions">${canQuote()?`<button class="btn small signal" data-act="takeJob" data-id="${esc(j.id)}">Take this job</button>`:""}<a class="btn small" href="${tel(j.phone)}">Call</a><a class="btn small ghost" target="_blank" rel="noopener" href="${wa(j.phone,"Hi, I saw your request on "+BRAND+": "+j.title)}">WhatsApp</a></div>
+        ${canQuote() ? `<div class="row-actions"><button class="btn small signal" data-act="takeJob" data-id="${esc(j.id)}">Take this job</button></div><small style="color:var(--muted)">You get the customer’s contact details once you take it.</small>` : ""}
       </div></article>`;
   }).join("");
 }
@@ -1483,7 +1525,7 @@ function renderDash(p){
   $("#dashName").textContent = p.name;
   $("#dashSummary").innerHTML = summaryHTML({...p, coverage:p.coverage||[], categories:p.categories||[], brands:p.brands||[]});
   const rv = (p.reviews||[]).slice().sort((a,b)=>b.date-a.date);
-  $("#dashReviews").innerHTML = rv.length ? `<p>${ratingHTML(p)}</p>` + rv.map(r=>`<div class="review"><b>${esc(r.name)}</b> <span class="rating"><span class="star">${"★".repeat(r.rating)}</span></span><p>${esc(r.text)}</p><small>${ago(r.date)}</small></div>`).join("")
+  $("#dashReviews").innerHTML = rv.length ? `<p>${ratingHTML(p)}</p>` + rv.map(r=>`<div class="review"><b>${esc(r.name)}</b> <span class="rating"><span class="star">${"★".repeat(stars(r.rating))}</span></span><p>${esc(r.text)}</p><small>${ago(r.date)}</small></div>`).join("")
     : `<p style="color:var(--muted)">No reviews yet. Ask happy customers to review you from your public listing.</p>`;
   $("#dashEmail").textContent = Auth.user.email;
   $("#viewPublicBtn").hidden = p.status!=="approved";
@@ -1492,7 +1534,7 @@ function renderDash(p){
 }
 function fillForm(p){
   resetRegForm();
-  const r = $(`#regForm input[name=ptype][value="${p.type}"]`); if(r) r.checked = true;
+  const r = TYPES[p.type] ? $(`#regForm input[name=ptype][value="${p.type}"]`) : null; if(r) r.checked = true;
   const set = (id,v) => $("#"+id).value = v ?? "";
   set("rName",p.name); set("rOwner",p.owner); set("rRegNo",p.regNo); set("rYears",p.years||""); set("rAbout",p.about);
   set("rCerts",p.certs); set("rHours",p.hours); set("rAtoll",p.atoll); set("rIsland",p.island); fillIslands("rAtoll","rIsland",true); set("rAddress",p.address);
@@ -1573,7 +1615,10 @@ async function nextStep(){
     } else {
       if(myListing()){ $("#regErr").textContent = "This account already has a listing."; btn.disabled=false; return; }
       const live = SUB.autoApprove !== false;
-      const rec = await Store.add("providers", {...d, ownerUid:Auth.user.uid, ownerEmail:Auth.user.email, status: live ? "approved" : "pending", verified:false, paused:false, reviews:[], createdAt:Date.now()});
+      const pid = Store.newId("providers"), now = Date.now();
+      const rec = {id:pid, ...d, ownerUid:Auth.user.uid, status: live ? "approved" : "pending", verified:false, paused:false, reviews:[], createdAt:now};
+      const {id:_x, ...pdata} = rec;
+      await Store.batch([["set","providers",pid,pdata], ["set","accounts",Auth.user.uid,{email:Auth.user.email||"", providerId:pid, createdAt:now}]]);
       state.providers.push(rec);
       $("#regRef").textContent = rec.id.toUpperCase();
       $("#doneTitle").textContent = live ? "Your listing is live" : "Submitted for review";
@@ -1601,7 +1646,7 @@ function summaryHTML(d){
 const today = () => new Date().toISOString().slice(0,10);
 const addDays = n => new Date(Date.now()+n*day).toISOString().slice(0,10);
 const fmtDate = s => s ? new Date(s.length===10 ? s+"T00:00" : s).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "";
-const money = (n,c) => (c||"MVR")+" "+(+n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money = (n,c) => (/^[A-Z]{3}$/.test(c||"") ? c : "MVR")+" "+(+n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const pad = n => String(n).padStart(4,"0");
 const caseLink = id => location.href.split("#")[0] + "#c=" + encodeURIComponent(id);
 const badge = ([t,c]) => `<span class="badge ${c||""}">${esc(t)}</span>`;
@@ -2130,7 +2175,7 @@ function fileToDataURL(f){ return new Promise((res,rej)=>{ const r=new FileReade
 async function readSlip(file){
   if(file.type==="application/pdf"){
     if(file.size > 700*1024) throw new Error("That PDF is too large. Upload a screenshot or photo of the slip instead.");
-    return {data: await fileToDataURL(file), type:"application/pdf", name:file.name};
+    return {data: await fileToDataURL(file), type:"application/pdf", name:String(file.name).slice(0,200)};
   }
   if(!file.type.startsWith("image/")) throw new Error("Upload a photo, screenshot or PDF of the slip.");
   const url = URL.createObjectURL(file);
@@ -2141,7 +2186,7 @@ async function readSlip(file){
   URL.revokeObjectURL(url);
   let data = cv.toDataURL("image/jpeg", .72);
   if(data.length > 900000) data = cv.toDataURL("image/jpeg", .5);
-  return {data, type:"image/jpeg", name:file.name};
+  return {data, type:"image/jpeg", name:String(file.name).slice(0,200)};
 }
 $("#cBody").addEventListener("submit", async e => {
   const f = e.target.closest(".slipForm"); if(!f) return; e.preventDefault();
@@ -2228,6 +2273,7 @@ document.addEventListener("click", async e => {
     releaseJob: () => releaseJob(id),
     saveProgress: () => saveProgress(id),
     track: () => openTrack(),
+    privacy: () => { e.preventDefault(); openPrivacy(); },
     toggleWa: async () => {
       const me = myListing(); if(!me) return;
       const on = me.waAlerts === false;
@@ -2272,6 +2318,27 @@ document.addEventListener("click", async e => {
 });
 $("#wsTabs").addEventListener("click", e => { const b = e.target.closest("[data-ws]"); if(!b) return; state.ws.tab = b.dataset.ws; if(state.ws.tab==="sub") state.ws.subLoaded = false; renderWs(); });
 
+/* ============ PRIVACY NOTICE ============ */
+function openPrivacy(){
+  const D = $("#linkDlg"), mail = esc(CONFIG.contactEmail||"");
+  D.innerHTML = `<div class="dlg-head"><div><h2>Privacy and terms</h2></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body privacy">
+      <h3>What we collect</h3>
+      <p>Customers: your request, name and phone number, and any payment slips you upload. Businesses: listing details, login email, quotations, invoices and payment records.</p>
+      <h3>Who can see it</h3>
+      <p>Business listings are public. Requests on the board are public without your name or phone number; those go only to the business that takes your request, and to the ${esc(BRAND)} admin. Quotations, invoices and slips are visible only to the business and to whoever has your private request link, so keep that link to yourself.</p>
+      <h3>Messages</h3>
+      <p>Businesses that turn on job alerts receive WhatsApp messages about new requests that match their services. They can turn this off at any time.</p>
+      <h3>Payments</h3>
+      <p>${esc(BRAND)} does not handle money between customers and businesses. Payments are bank transfers made directly to the business, which confirms them. Check the business’s details before you pay.</p>
+      <h3>Your choices</h3>
+      <p>To correct or delete your information, email <a href="mailto:${mail}">${mail}</a>. Businesses can edit or hide their listing from their workspace.</p>
+      <h3>Terms</h3>
+      <p>${esc(BRAND)} is a directory and job board. Businesses are independent and responsible for their own work, prices and warranties. Don’t post false requests or reviews; the admin may remove listings, requests or reviews that break these rules.</p>
+    </div>`;
+  if(!D.open) D.showModal();
+}
+
 /* ============ WHATSAPP ALERTS (via Apps Script) ============ */
 function notifyBusinesses(type, id){
   if(!CONFIG.alertsUrl || !Auth.cloud) return;
@@ -2282,7 +2349,11 @@ function notifyBusinesses(type, id){
 const STAGES = [["new","New"],["accepted","Job accepted"],["inspecting","Inspecting"],["waiting_parts","Waiting for parts"],["in_progress","Work in progress"],["completed","Completed"]];
 const STAGE = Object.fromEntries(STAGES);
 const stageIdx = k => Math.max(0, STAGES.findIndex(s=>s[0]===(k||"new")));
-const jobLink = id => location.href.split("#")[0] + "#j=" + encodeURIComponent(id);
+const jobLink = (id, cid) => location.href.split("#")[0] + "#j=" + encodeURIComponent(id) + (cid ? "&k=" + encodeURIComponent(cid) : "");
+const lsGet = k => { try { return localStorage.getItem("marineassist_"+k); } catch { return null; } };
+const lsSet = (k,v) => { try { localStorage.setItem("marineassist_"+k, String(v)); } catch {} };
+const myRequests = () => { try { return JSON.parse(lsGet("myrequests")||"[]"); } catch { return []; } };
+const rememberRequest = r => { const l = myRequests().filter(x=>!(r.jobId ? x.jobId===r.jobId : x.cid===r.cid)); l.unshift(r); lsSet("myrequests", JSON.stringify(l.slice(0,30))); };
 
 async function takeJob(jobId){
   const p = myListing();
@@ -2290,13 +2361,16 @@ async function takeJob(jobId){
   let j = state.jobs.find(x=>x.id===jobId);
   try { j = await Store.get("jobs", jobId) || j; } catch {}
   if(!j || j.status!=="open"){ await refresh(); renderJobs(); return toast("Another business has already taken this job."); }
-  if(!confirm(`Take “${j.title}”?\n\nIt leaves the request board, and ${j.name} will see that ${p.name} is handling it.`)) return;
-  const caseId = Store.newId("cases"), now = Date.now();
+  if(!confirm(`Take “${j.title}”?\n\nIt leaves the request board, you get the customer’s contact details, and they will see that ${p.name} is handling it.`)) return;
+  const now = Date.now();
   try {
-    await Store.claim("jobs", jobId, {status:"taken", takenBy:p.id, takenByName:p.name, takenByUid:Auth.user.uid, takenAt:now, caseId}, d => d.status==="open");
+    await Store.claim("jobs", jobId, {status:"taken", takenBy:p.id, takenByName:p.name, takenByUid:Auth.user.uid, takenAt:now}, d => d.status==="open");
   } catch(e){ await refresh(); renderJobs(); return toast(e.message); }
+  let contact = null; try { contact = await Store.get("jobs/"+jobId+"/private", "contact"); } catch {}
+  if(!contact) contact = {name:j.name||"Customer", phone:j.phone||"", caseId:Store.newId("cases")};   // requests posted before this update
+  const caseId = contact.caseId;
   await Store.set("cases", caseId, {providerId:p.id, ownerUid:Auth.user.uid, source:"board", jobId, title:j.title, category:j.category, boatType:j.boatType, engine:j.engine,
-    description:j.description, atoll:j.atoll, island:j.island, urgency:j.urgency, customer:{name:j.name, phone:j.phone}, closed:false, docIds:[],
+    description:j.description, atoll:j.atoll, island:j.island, urgency:j.urgency, customer:{name:contact.name, phone:contact.phone}, closed:false, docIds:[],
     stage:"accepted", updates:[{at:now, stage:"accepted", text:`${p.name} took your request.`}], createdAt:now});
   await refresh(); await loadWs();
   state.ws.tab = "requests"; show("register"); openCase(caseId);
@@ -2305,9 +2379,11 @@ async function takeJob(jobId){
 async function releaseJob(caseId){
   const c = wsCase(caseId); if(!c || !c.jobId) return;
   if(!confirm("Give this job back to the request board? Other businesses will be able to take it.")) return;
+  // Drafts and the workspace copy are removed so the next business can start fresh on the customer's same link
+  const drafts = state.ws.docs.filter(d=>d.caseId===c.id).map(d=>["delete","docs",d.id]);
   await Store.update("jobs", c.jobId, {status:"open", takenBy:null, takenByName:null, takenByUid:null, takenAt:null, caseId:null});
-  const updates = [...(c.updates||[]), {at:Date.now(), stage:c.stage||"new", text:"Released back to the request board."}];
-  await Store.update("cases", c.id, {closed:true, updates}); Object.assign(c, {closed:true, updates});
+  await Store.batch([...drafts, ["delete","cases",c.id]]);
+  state.ws.cases = state.ws.cases.filter(x=>x.id!==c.id); state.ws.docs = state.ws.docs.filter(d=>d.caseId!==c.id);
   await refresh(); renderWs(); $("#caseDlg").close(); toast("Job returned to the request board");
 }
 function progressBlock(c){
@@ -2324,50 +2400,45 @@ async function saveProgress(caseId){
 }
 
 /* ----- customer: posted job page and tracking by phone ----- */
-function showJobPosted(j){
-  const link = jobLink(j.id), D = $("#linkDlg");
+function showJobPosted(j, cid){
+  const link = jobLink(j.id, cid), D = $("#linkDlg");
   D.innerHTML = `<div class="dlg-head"><div><h2>Request posted</h2><p class="meta"><span>${esc(j.title)}</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
     <div class="dlg-body">
-      <p>Businesses can now see your request. When one takes it, you’ll see who is handling it, their progress, quotations and invoices on your request page.</p>
+      <p>Businesses can now see your request. Your name and phone number are only shared with the business that takes it. You’ll then see who is handling it, their progress, quotations and invoices on your request page.</p>
       <div class="linkbox"><input class="input" readonly value="${esc(link)}" aria-label="Your request link"><button class="btn ghost" data-act="copyRaw" data-v="${esc(link)}">Copy</button></div>
-      <p class="hint">Lost the link? Use “Track my request” on the request board with your phone number.${Auth.cloud ? "" : " Demo mode: the link only works in this browser."}</p>
-      <div class="contact" style="margin-top:14px"><a class="btn" href="#j=${encodeURIComponent(j.id)}">Open my request page</a></div>
+      <p class="hint">Keep this link private: anyone with it can see your request page. It’s also saved under “My requests” on this device.${Auth.cloud ? "" : " Demo mode: the link only works in this browser."}</p>
+      <div class="contact" style="margin-top:14px"><a class="btn" href="${esc(link.slice(link.indexOf("#")))}">Open my request page</a></div>
     </div>`;
   D.showModal();
 }
 function openTrack(){
-  const D = $("#linkDlg");
-  D.innerHTML = `<div class="dlg-head"><div><h2>Track my request</h2><p class="meta"><span>Find requests you posted on the board</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
-    <form class="dlg-body" id="trackForm" novalidate>
-      <div class="field"><label class="f" for="trPhone">The phone number you used</label><input class="input" id="trPhone" inputmode="tel" placeholder="7-digit number"></div>
-      <p class="err" id="trErr" role="alert"></p>
-      <button class="btn">Find my requests</button>
-      <div id="trList" style="margin-top:16px"></div>
-    </form>`;
+  const D = $("#linkDlg"), l = myRequests();
+  D.innerHTML = `<div class="dlg-head"><div><h2>My requests</h2><p class="meta"><span>Requests sent from this device</span></p></div><button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      ${l.length ? l.map(r=>`<div class="item"><div><h3 style="font-size:19px">${esc(r.title||"Request")}</h3><p class="meta"><span>${ago(+r.at||Date.now())}</span></p></div>
+        <div class="acts"><a class="btn small" href="${r.jobId ? "#j="+encodeURIComponent(r.jobId)+(r.cid?"&k="+encodeURIComponent(r.cid):"") : "#c="+encodeURIComponent(r.cid)}">Open</a></div></div>`).join("")
+        : `<p style="color:var(--muted)">No requests saved on this device. Open the link you got when you posted, or ask the business to send it to you on WhatsApp.</p>`}
+      <p class="hint" style="margin-top:12px">For your privacy, requests can only be opened with their private link.</p>
+    </div>`;
   D.showModal();
-  $("#trackForm").onsubmit = async e => {
-    e.preventDefault(); const ph = digits($("#trPhone").value);
-    if(!validPhone(ph)) return $("#trErr").textContent = "Enter a 7-digit Maldivian phone number.";
-    $("#trErr").textContent = ""; await refresh();
-    const mine = state.jobs.filter(j=>digits(j.phone)===ph).sort((a,b)=>b.createdAt-a.createdAt);
-    $("#trList").innerHTML = mine.length ? mine.map(j=>`<div class="item"><div><h3 style="font-size:19px">${esc(j.title)}</h3><p class="meta"><span>${ago(j.createdAt)}</span><span>${j.status==="taken"?"Taken by "+esc(j.takenByName):j.status==="open"?"Waiting for a business":"Closed"}</span></p></div>
-      <div class="acts"><a class="btn small" href="#j=${encodeURIComponent(j.id)}">Open</a></div></div>`).join("")
-      : `<p style="color:var(--muted)">No requests found for that number.</p>`;
-  };
 }
-async function renderCustomerJob(id){
+async function renderCustomerJob(id, cid){
   $$(".view").forEach(v => v.hidden = v.id!=="view-case");
   $$(".nav button").forEach(b => b.removeAttribute("aria-current"));
   window.scrollTo(0,0);
-  let j = null; try { j = await Store.get("jobs", id); } catch {}
-  if(j && j.status==="taken" && j.caseId) return renderCustomerCase(j.caseId);
+  let j = null; try { j = id ? await Store.get("jobs", id) : null; } catch {}
+  if(j && j.status==="taken"){
+    let c = null; const k = cid || j.caseId;   // caseId only exists on requests posted before the privacy update
+    if(k){ try { c = await Store.get("cases", k); } catch {} }
+    if(c) return renderCustomerCase(k);
+  }
   $("#cContact").innerHTML = "";
-  if(!j){ $("#cTitle").textContent = "Request not found"; $("#cLede").textContent = "Check the link, or use Track my request on the request board."; $("#cBody").innerHTML = ""; return; }
+  if(!j){ $("#cTitle").textContent = "Request not found"; $("#cLede").textContent = "Check the link, or open My requests on the request board."; $("#cBody").innerHTML = ""; return; }
   $("#cTitle").textContent = j.title;
-  $("#cLede").textContent = j.status==="open" ? "Waiting for a business to take your request." : "This request is closed.";
+  $("#cLede").textContent = j.status==="open" ? "Waiting for a business to take your request." : j.status==="taken" ? `${j.takenByName||"A business"} is handling your request. Open the link from your request confirmation or WhatsApp to see their updates.` : "This request is closed.";
   $("#cBody").innerHTML = `<div class="panel cdoc"><h2 style="font-size:26px;margin-bottom:12px">Your request</h2>
     <dl class="kv">${kvRow("Service",CAT[j.category])}${kvRow("Boat",j.boatType)}${kvRow("Engine or equipment",j.engine)}${kvRow("Location",[j.island,j.atoll].filter(Boolean).join(", "))}${kvRow("Details",j.description)}${kvRow("Posted",ago(j.createdAt))}</dl>
-    ${j.status==="open" ? `<p class="hint" style="margin-top:14px">When a business takes it, this page shows who is handling it, their progress, and any quotation or invoice. Businesses may also call you on ${esc(fmtPhone(j.phone))}.</p>` : ""}</div>`;
+    ${j.status==="open" ? `<p class="hint" style="margin-top:14px">When a business takes it, this page shows who is handling it, their progress, and any quotation or invoice. Only that business gets your phone number.</p>` : ""}</div>`;
 }
 /* ============ SUBSCRIPTIONS ============ */
 const SUB_DEFAULT = {enabled:false, autoApprove:true, freeDays:30, currency:"MVR", plans:[{id:"monthly",name:"Monthly",days:30,price:300,discount:0},{id:"yearly",name:"Yearly",days:365,price:3600,discount:15}], banks:[], note:""};
@@ -2423,7 +2494,7 @@ $("#wsPanel").addEventListener("submit", async e => {
   btn.disabled = true; btn.textContent = "Sending…"; err.textContent = "";
   try {
     const sl = await Store.add("slips", {...(await readSlip(file)), createdAt:Date.now()});
-    await Store.add("subpayments", {providerId:p.id, providerName:p.name, ownerUid:Auth.user.uid, ownerEmail:Auth.user.email||"", planId:plan.id, planName:plan.name, days:+plan.days,
+    await Store.add("subpayments", {providerId:p.id, providerName:p.name, ownerUid:Auth.user.uid, ownerEmail:(Auth.user.email||"").slice(0,200), planId:plan.id, planName:plan.name, days:+plan.days,
       amount:planPrice(plan), listPrice:+plan.price, discount:+plan.discount||0, currency:SUB.currency, reference:$("#sbRef").value.trim(), slipId:sl.id, status:"pending", createdAt:Date.now()});
     subPick = null; await loadSubPays(); toast("Slip sent. The admin will check it and extend your subscription."); renderWs();
   } catch(x){ err.textContent = x.message; btn.disabled = false; btn.textContent = "Send payment slip"; }
@@ -2431,6 +2502,9 @@ $("#wsPanel").addEventListener("submit", async e => {
 
 /* ----- admin: payments, businesses, settings ----- */
 const adminSubs = {list:[], loaded:false, loading:false};
+let adminAccounts = {};
+const acctEmail = p => (adminAccounts[p.ownerUid] && adminAccounts[p.ownerUid].email) || p.ownerEmail || "";
+async function loadAccounts(){ try { const l = await Store.list("accounts"); adminAccounts = Object.fromEntries(l.map(a=>[a.id,a])); } catch {} }
 async function loadAdminSubs(){ adminSubs.loading = true; try { adminSubs.list = (await Store.list("subpayments")).sort((a,b)=>b.createdAt-a.createdAt); adminSubs.loaded = true; } finally { adminSubs.loading = false; } }
 function renderAdminSubs(){
   const L = $("#adminList");
@@ -2442,11 +2516,12 @@ function renderAdminSubs(){
   const pend = adminSubs.list.filter(x=>x.status==="pending"), done = adminSubs.list.filter(x=>x.status!=="pending").slice(0,15);
   const provs = state.providers.filter(p=>p.status==="approved").sort((a,b)=>subEnd(a)-subEnd(b));
   const payRow = (x, actions) => `<div class="adm-item"><header><div><h3>${esc(x.providerName)} <span style="font-weight:500;color:var(--muted)">${esc(x.planName)}, ${durLabel(+x.days)}</span></h3>
+      ${(()=>{ const pl = SUB.plans.find(y=>y.id===x.planId); return x.status==="pending" && (!pl || +pl.days!==+x.days || Math.abs(planPrice(pl)-(+x.amount||0))>0.01) ? `<p class="err" style="margin:2px 0">Check this one: it doesn’t match your current ${pl ? esc(pl.name)+" plan ("+durLabel(+pl.days)+", "+money(planPrice(pl),SUB.currency)+")" : "plans"}. Approving gives the plan’s days.</p>` : ""; })()}
       <p class="meta"><span>${money(x.amount,x.currency)}${+x.discount>0?` (${esc(+x.discount)}% off ${money(x.listPrice,x.currency)})`:""}</span>${x.reference?`<span>Ref ${esc(x.reference)}</span>`:""}<span>${esc(x.ownerEmail||"")}</span><span>${ago(x.createdAt)}</span></p>${x.status==="rejected"&&x.reason?`<p class="hint">Reason: ${esc(x.reason)}</p>`:""}</div>
       <div class="btns">${x.slipId?`<button class="btn small ghost" data-act="slip" data-id="${esc(x.slipId)}">View slip</button>`:""}${actions ? `<button class="btn small" data-act="subOk" data-id="${esc(x.id)}">Approve</button><button class="btn small ghost" data-act="subNo" data-id="${esc(x.id)}">Reject</button>` : badge(x.status==="approved"?["Approved","ok"]:["Rejected","alarm"])}</div></header></div>`;
   L.innerHTML = (SUB.enabled ? "" : `<div class="status pending"><b>Subscriptions are switched off</b><span>All approved listings stay visible for free. Turn subscriptions on under Subscription settings.</span></div>`) +
     `<h3 class="sub-h" style="margin-top:0">Payments to check (${pend.length})</h3>` + (pend.length ? pend.map(x=>payRow(x,true)).join("") : `<p style="color:var(--muted)">No payments waiting.</p>`) +
-    `<h3 class="sub-h">Businesses and days remaining</h3>` + (provs.length ? provs.map(p=>{ const i = subInfo(p, true); return `<div class="adm-item"><header><div><h3>${esc(p.name)}</h3><p class="meta"><span>${esc(p.island)}, ${esc(p.atoll)}</span><span>${esc(p.ownerEmail||"")}</span><span>${esc(i.short)}</span></p></div>
+    `<h3 class="sub-h">Businesses and days remaining</h3>` + (provs.length ? provs.map(p=>{ const i = subInfo(p, true); return `<div class="adm-item"><header><div><h3>${esc(p.name)}</h3><p class="meta"><span>${esc(p.island)}, ${esc(p.atoll)}</span><span>${esc(acctEmail(p))}</span><span>${esc(i.short)}</span></p></div>
       <div class="btns"><span class="daysleft small ${i.expired?"alarm":i.soon?"warn":""}"><strong>${i.left??0}</strong><span>day${i.left===1?"":"s"} left</span></span><button class="btn small ghost" data-act="subExt" data-id="${esc(p.id)}">Add days</button></div></header></div>`; }).join("") : `<p style="color:var(--muted)">No approved businesses yet.</p>`) +
     (done.length ? `<h3 class="sub-h">Recent decisions</h3>` + done.map(x=>payRow(x,false)).join("") : "");
 }
@@ -2576,7 +2651,10 @@ function setupAdmin(){
       if(act==="subOk"){
         const pay = adminSubs.list.find(x=>x.id===id), pr = pay && state.providers.find(x=>x.id===pay.providerId);
         if(!pr) throw new Error("That business no longer exists.");
-        const until = Math.max(Date.now(), subEnd(pr)) + (+pay.days||0)*day;
+        const plan = SUB.plans.find(x=>x.id===pay.planId);
+        if(!plan && !confirm("This payment's plan no longer exists in your settings. Approve it for "+durLabel(+pay.days)+" anyway?")) return;
+        if(plan && (Math.abs(planPrice(plan) - (+pay.amount||0)) > 0.01) && !confirm(`The amount sent (${money(pay.amount,pay.currency)}) is different from the ${plan.name} price (${money(planPrice(plan),SUB.currency)}). Approve anyway?`)) return;
+        const until = Math.max(Date.now(), subEnd(pr)) + (plan ? +plan.days : (+pay.days||0))*day;
         await Store.update("providers", pr.id, {subUntil:until});
         await Store.update("subpayments", id, {status:"approved", reviewedAt:Date.now(), until});
         adminSubs.loaded = false; toast(`Approved. ${pr.name} is subscribed until ${fmtMs(until)}.`);
@@ -2594,7 +2672,32 @@ function setupAdmin(){
       if(act==="reject"){ await Store.update("providers",id,{status:"rejected"}); toast("Listing rejected"); }
       if(act==="verify"){ const p=state.providers.find(x=>x.id===id); await Store.update("providers",id,{verified:!p.verified}); toast(p.verified?"Verified badge removed":"Marked as verified"); }
       if(act==="unlist"){ await Store.update("providers",id,{status:"pending"}); toast("Moved back to approval queue"); }
-      if(act==="delprov"){ if(!confirm("Delete this provider permanently?")) return; await Store.remove("providers",id); toast("Provider deleted"); }
+      if(act==="delprov"){
+        if(!confirm("Delete this provider permanently? The owner will be able to register again.")) return;
+        const pr = state.providers.find(x=>x.id===id);
+        await Store.remove("providers",id); if(pr && pr.ownerUid){ try { await Store.remove("accounts", pr.ownerUid); } catch {} }
+        toast("Provider deleted");
+      }
+      if(act==="cleanJobs"){
+        const old = state.jobs.filter(j=>"phone" in j || "name" in j || "caseId" in j); let n = 0;
+        for(const j of old){
+          const ops = [];
+          if(j.phone && /^[3-9]\d{6}$/.test(j.phone)) ops.push(["set","jobs/"+j.id+"/private","contact",{name:String(j.name||"Customer").slice(0,60), phone:j.phone, caseId:j.caseId || Store.newId("cases")}]);
+          ops.push(["update","jobs",j.id,{name:Store.DEL, phone:Store.DEL, caseId:Store.DEL}]);
+          try { await Store.batch(ops); n++; } catch(x){ console.warn(x); }
+        }
+        toast(`${n} request${n===1?"":"s"} made private. Businesses can resend customer links from their workspace.`);
+      }
+      if(act==="jobContact"){
+        const j = state.jobs.find(x=>x.id===id); let c = null; try { c = await Store.get("jobs/"+id+"/private","contact"); } catch {}
+        c = c || (j && j.phone ? {name:j.name, phone:j.phone} : null);
+        b.textContent = c ? `${c.name||""} ${fmtPhone(c.phone)}` : "No contact saved"; b.disabled = true; return;
+      }
+      if(act==="delrev"){
+        const pr = state.providers.find(x=>x.id===id), i = +b.dataset.i; if(!pr) return;
+        if(!confirm("Remove this review?")) return;
+        const reviews = (pr.reviews||[]).filter((_,k)=>k!==i); await Store.update("providers", id, {reviews}); toast("Review removed");
+      }
       if(act==="closejob"){ await Store.update("jobs",id,{status:"closed"}); toast("Request closed"); }
       if(act==="reopenjob"){ await Store.update("jobs",id,{status:"open"}); toast("Request reopened"); }
       if(act==="deljob"){ if(!confirm("Delete this request permanently?")) return; await Store.remove("jobs",id); toast("Request deleted"); }
@@ -2604,13 +2707,15 @@ function setupAdmin(){
 }
 function provDetails(p){
   const kv = (k,v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : "";
-  return `<details><summary>Full details</summary><dl class="kv">${kv("Account",p.ownerEmail)}${kv("Contact person",p.owner)}${kv("Registration",p.regNo)}${kv("Phone",fmtPhone(p.phone))}${kv("WhatsApp",p.whatsapp&&fmtPhone(p.whatsapp))}${kv("Email",p.email)}${kv("Services",(p.categories||[]).map(c=>CAT[c]).join(", "))}${kv("Brands",(p.brands||[]).join(", "))}${kv("Covers",coverageText(p))}${kv("Certifications",p.certs)}${kv("About",p.about)}${kv("Submitted",new Date(p.createdAt).toLocaleString())}</dl></details>`;
+  const revs = (p.reviews||[]).map((r,i)=>`<div class="review"><b>${esc(r.name)}</b> ${"★".repeat(stars(r.rating))} <span class="hint">${esc(r.text)}</span> <button class="btn small ghost" data-act="delrev" data-id="${esc(p.id)}" data-i="${i}">Remove</button></div>`).join("");
+  return `${revs ? `<details><summary>Reviews (${(p.reviews||[]).length})</summary>${revs}</details>` : ""}<details><summary>Full details</summary><dl class="kv">${kv("Account",acctEmail(p))}${kv("Contact person",p.owner)}${kv("Registration",p.regNo)}${kv("Phone",fmtPhone(p.phone))}${kv("WhatsApp",p.whatsapp&&fmtPhone(p.whatsapp))}${kv("Email",p.email)}${kv("Services",(p.categories||[]).map(c=>CAT[c]).join(", "))}${kv("Brands",(p.brands||[]).join(", "))}${kv("Covers",coverageText(p))}${kv("Certifications",p.certs)}${kv("About",p.about)}${kv("Submitted",new Date(p.createdAt).toLocaleString())}</dl></details>`;
 }
 function renderAdmin(){
   const ok = Auth.cloud ? isAdminUser() : state.admin;
   $("#pinWrap").hidden = Auth.cloud; $("#admLoginWrap").hidden = !Auth.cloud;
   $("#gate").hidden = ok; $("#adminArea").hidden = !ok; if(!ok) return;
   const pending = state.providers.filter(p=>p.status==="pending");
+  if(!Object.keys(adminAccounts).length && !renderAdmin.acc){ renderAdmin.acc = true; loadAccounts().then(()=>{ if(!$("#view-admin").hidden) renderAdmin(); }); }
   if(!adminSubs.loaded && !adminSubs.loading) loadAdminSubs().then(()=>{ if(!$("#view-admin").hidden && !["cats","subcfg"].includes(state.adminTab)) renderAdmin(); }).catch(()=>{});
   $$("#adminArea .seg button").forEach(b => {
     b.setAttribute("aria-selected", b.dataset.tab===state.adminTab);
@@ -2634,10 +2739,10 @@ function renderAdmin(){
   if(t==="subs"){ renderAdminSubs(); return; }
   if(t==="subcfg"){ renderSubCfg(); return; }
   if(t==="jobs"){
-    const js = state.jobs.slice().sort((a,b)=>b.createdAt-a.createdAt);
-    L.innerHTML = js.length ? js.map(j=>`<div class="adm-item"><header><div><h3>${esc(j.title)}</h3><p class="meta"><span>${j.status==="open"?"Open":j.status==="taken"?"Taken by "+esc(j.takenByName||""):"Closed"}</span><span>${esc(j.island)}, ${esc(j.atoll)}</span><span>${esc(j.name)} ${esc(fmtPhone(j.phone))}</span><span>${ago(j.createdAt)}</span></p></div>
-      <div class="btns">${j.status==="open"?`<button class="btn small ghost" data-act="closejob" data-id="${esc(j.id)}">Close</button>`:`<button class="btn small ghost" data-act="reopenjob" data-id="${esc(j.id)}">Reopen</button>`}<button class="btn small ghost" data-act="deljob" data-id="${esc(j.id)}">Delete</button></div></header></div>`).join("")
-      : `<div class="empty"><h3>No requests yet</h3><p>Requests posted on the request board appear here.</p></div>`;
+    const js = state.jobs.slice().sort((a,b)=>b.createdAt-a.createdAt), old = js.filter(j=>"phone" in j || "name" in j || "caseId" in j).length;
+    L.innerHTML = (old ? `<div class="status pending"><b>${old} older request${old===1?"":"s"} still show contact details publicly</b><span>Requests posted before the privacy update keep the customer’s name and phone in public data. <button class="btn small" data-act="cleanJobs" style="margin-left:6px">Make them private</button></span></div>` : "") + (js.length ? js.map(j=>`<div class="adm-item"><header><div><h3>${esc(j.title)}</h3><p class="meta"><span>${j.status==="open"?"Open":j.status==="taken"?"Taken by "+esc(j.takenByName||""):"Closed"}</span><span>${esc(j.island)}, ${esc(j.atoll)}</span><span>${ago(j.createdAt)}</span></p></div>
+      <div class="btns"><button class="btn small ghost" data-act="jobContact" data-id="${esc(j.id)}">Contact</button>${j.status==="open"?`<button class="btn small ghost" data-act="closejob" data-id="${esc(j.id)}">Close</button>`:`<button class="btn small ghost" data-act="reopenjob" data-id="${esc(j.id)}">Reopen</button>`}<button class="btn small ghost" data-act="deljob" data-id="${esc(j.id)}">Delete</button></div></header></div>`).join("")
+      : `<div class="empty"><h3>No requests yet</h3><p>Requests posted on the request board appear here.</p></div>`);
   }
 }
 
@@ -2656,7 +2761,7 @@ $("#themeBtn").onclick = () => {
     await Auth.init(mode);
     await refresh();
     await loadCats(); await loadSub();
-    updateAcctBtn(); startLive();
+    updateAcctBtn(); startLive(); if(Auth.user) migrateOwner();
   } catch(e){ toast("Couldn’t connect to the database: "+e.message); }
   renderDir();
   show(location.hash.slice(1) || "find");

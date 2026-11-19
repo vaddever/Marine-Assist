@@ -1,0 +1,234 @@
+rules_version = '2';
+// Marine Assist – Firestore security rules (hardened, Nov 2026)
+// Paste the whole file into Firebase console → Firestore Database → Rules, then Publish.
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+
+    // Admin must be signed in with a VERIFIED email (Google sign-in is always verified).
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == "vaddever@gmail.com"
+        && request.auth.token.email_verified == true;
+    }
+
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function str(v, max) { return v is string && v.size() <= max; }
+    function req(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function phone7(v) { return v is string && v.matches('^[3-9][0-9]{6}$'); }
+    // Client clocks can be off, so allow a day either way; stops "free trial until 2099" tricks.
+    function nearNow(t) { return t is int && math.abs(t - request.time.toMillis()) < 86400000; }
+
+    function autoApproveOn() {
+      return !exists(/databases/$(db)/documents/config/subscription)
+        || get(/databases/$(db)/documents/config/subscription).data.get("autoApprove", true) == true;
+    }
+
+    // Anyone may add ONE review at the end of the list; nobody but the admin can edit or remove reviews.
+    function reviewAdd() {
+      let before = resource.data.get("reviews", []);
+      let after = request.resource.data.reviews;
+      let r = after[after.size() - 1];
+      return changed().hasOnly(["reviews"])
+        && after.size() == before.size() + 1 && after.size() <= 500
+        && after[0:before.size()] == before
+        && r.keys().hasOnly(["name", "rating", "text", "date"])
+        && r.rating is int && r.rating >= 1 && r.rating <= 5
+        && req(r.name, 1, 40) && str(r.text, 400)
+        && nearNow(r.date);
+    }
+
+    // Customer (by private link) accepts or declines a quotation that was sent to them.
+    function quoteAnswer() {
+      return resource.data.kind == "quote" && resource.data.status == "sent"
+        && changed().hasOnly(["status", "respondedAt"])
+        && request.resource.data.status in ["accepted", "declined"]
+        && nearNow(request.resource.data.respondedAt);
+    }
+
+    // Customer adds ONE pending payment slip to an issued invoice. Existing payments can't be touched.
+    function slipAdd() {
+      let before = resource.data.get("payments", []);
+      let after = request.resource.data.payments;
+      let x = after[after.size() - 1];
+      return resource.data.kind == "invoice" && resource.data.status == "issued"
+        && changed().hasOnly(["payments"])
+        && after.size() == before.size() + 1 && after.size() <= 50
+        && after[0:before.size()] == before
+        && x.keys().hasOnly(["id", "amount", "reference", "payer", "method", "slipId", "status", "at"])
+        && x.status == "pending" && x.method == "transfer"
+        && x.amount is number && x.amount > 0 && x.amount < 10000000
+        && str(x.reference, 100) && str(x.payer, 100) && req(x.slipId, 1, 64) && req(x.id, 1, 40)
+        && nearNow(x.at);
+    }
+
+    // ---------- business listings (public) ----------
+    match /providers/{id} {
+      allow read: if true;
+
+      // One listing per account. Created together with accounts/{uid} in one batch.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.verified == false
+        && request.resource.data.reviews == []
+        && !request.resource.data.keys().hasAny(["subUntil", "approvedAt", "ownerEmail"])
+        && nearNow(request.resource.data.createdAt)
+        && req(request.resource.data.name, 2, 120)
+        && phone7(request.resource.data.phone)
+        && str(request.resource.data.get("about", ""), 1000)
+        && !exists(/databases/$(db)/documents/accounts/$(request.auth.uid))
+        && getAfter(/databases/$(db)/documents/accounts/$(request.auth.uid)).data.providerId == id
+        && (request.resource.data.status == "pending"
+            || (request.resource.data.status == "approved" && autoApproveOn()));
+
+      allow update: if isAdmin()
+        // Owner edits their listing: not approval, verification, reviews, dates or subscription
+        || (signedIn() && resource.data.ownerUid == request.auth.uid
+            && !changed().hasAny(["ownerUid", "verified", "reviews", "createdAt", "subUntil", "approvedAt"])
+            && (!("ownerEmail" in request.resource.data)
+                || request.resource.data.ownerEmail == resource.data.get("ownerEmail", null))
+            && req(request.resource.data.name, 2, 120)
+            && phone7(request.resource.data.phone)
+            && str(request.resource.data.get("about", ""), 1000)
+            && (request.resource.data.status == resource.data.status
+                || (resource.data.status == "rejected" && request.resource.data.status == "pending")))
+        // Anyone: add one review
+        || reviewAdd();
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- private account info (login email), one per user ----------
+    match /accounts/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(["email", "providerId", "createdAt"])
+        && str(request.resource.data.email, 200)
+        && getAfter(/databases/$(db)/documents/providers/$(request.resource.data.providerId)).data.ownerUid == uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- request board (public: no customer name or phone) ----------
+    match /jobs/{jobId} {
+      allow read: if true;
+
+      allow create: if request.resource.data.status == "open"
+        && request.resource.data.keys().hasOnly(["title", "category", "boatType", "engine", "description",
+                                                 "atoll", "island", "urgency", "status", "createdAt"])
+        && req(request.resource.data.title, 3, 120)
+        && req(request.resource.data.category, 1, 64)
+        && str(request.resource.data.boatType, 60)
+        && str(request.resource.data.engine, 120)
+        && str(request.resource.data.description, 1000)
+        && str(request.resource.data.atoll, 40)
+        && str(request.resource.data.island, 80)
+        && request.resource.data.urgency in ["emergency", "week", "flexible"]
+        && nearNow(request.resource.data.createdAt);
+
+      allow update: if isAdmin()
+        // An approved business takes an open job in its own name
+        || (signedIn() && resource.data.status == "open"
+            && request.resource.data.status == "taken"
+            && request.resource.data.takenByUid == request.auth.uid
+            && get(/databases/$(db)/documents/providers/$(request.resource.data.takenBy)).data.ownerUid == request.auth.uid
+            && get(/databases/$(db)/documents/providers/$(request.resource.data.takenBy)).data.status == "approved"
+            && changed().hasOnly(["status", "takenBy", "takenByName", "takenByUid", "takenAt"]))
+        // The business that took it gives it back
+        || (signedIn() && resource.data.get("takenByUid", null) == request.auth.uid
+            && request.resource.data.status == "open"
+            && changed().hasOnly(["status", "takenBy", "takenByName", "takenByUid", "takenAt", "caseId"]));
+
+      allow delete: if isAdmin();
+
+      // Customer's name, phone and private case link: only the admin and the business that took the job
+      match /private/{docId} {
+        allow create: if isAdmin() || (docId == "contact"
+          && !exists(/databases/$(db)/documents/jobs/$(jobId))
+          && getAfter(/databases/$(db)/documents/jobs/$(jobId)).data.status == "open"
+          && request.resource.data.keys().hasOnly(["name", "phone", "caseId"])
+          && req(request.resource.data.name, 1, 60)
+          && phone7(request.resource.data.phone)
+          && request.resource.data.caseId is string
+          && request.resource.data.caseId.matches('^[A-Za-z0-9]{20}$'));   // admin may also move older contact details here
+        allow get: if isAdmin()
+          || (signedIn() && get(/databases/$(db)/documents/jobs/$(jobId)).data.get("takenByUid", null) == request.auth.uid);
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ---------- jobs in a business workspace (customer opens by private link) ----------
+    match /cases/{caseId} {
+      allow get: if true;
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      allow create: if
+        // Customer sends a quote request straight to a live business
+        (request.resource.data.source == "direct"
+          && request.resource.data.keys().hasOnly(["providerId", "ownerUid", "source", "jobId", "title", "category",
+                                                   "boatType", "engine", "description", "atoll", "island", "urgency",
+                                                   "customer", "closed", "docIds", "createdAt"])
+          && get(/databases/$(db)/documents/providers/$(request.resource.data.providerId)).data.ownerUid == request.resource.data.ownerUid
+          && get(/databases/$(db)/documents/providers/$(request.resource.data.providerId)).data.status == "approved"
+          && request.resource.data.docIds == [] && request.resource.data.closed == false && request.resource.data.jobId == null
+          && req(request.resource.data.title, 3, 120) && str(request.resource.data.description, 1000)
+          && request.resource.data.customer.keys().hasOnly(["name", "phone"])
+          && req(request.resource.data.customer.name, 1, 60) && phone7(request.resource.data.customer.phone)
+          && nearNow(request.resource.data.createdAt))
+        // A business adds a job or takes one from the board
+        || (signedIn() && request.resource.data.ownerUid == request.auth.uid
+            && request.resource.data.source in ["board", "manual"]);
+
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ---------- quotations and invoices ----------
+    match /docs/{docId} {
+      allow get: if true;   // customer views by private link
+      allow list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow update: if (signedIn() && resource.data.ownerUid == request.auth.uid
+                        && request.resource.data.ownerUid == request.auth.uid)
+        || quoteAnswer()
+        || slipAdd();
+    }
+
+    // ---------- uploaded transfer slips (opened only by exact ID) ----------
+    match /slips/{slipId} {
+      allow get: if true;
+      allow create: if request.resource.data.keys().hasOnly(["data", "type", "name", "createdAt"])
+        && request.resource.data.type in ["image/jpeg", "application/pdf"]
+        && request.resource.data.data is string && request.resource.data.data.size() < 1000000
+        && str(request.resource.data.name, 200)
+        && nearNow(request.resource.data.createdAt);
+    }
+
+    // ---------- admin settings: categories, subscription plans ----------
+    match /config/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- subscription payments ----------
+    match /subpayments/{id} {
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == "pending"
+        && get(/databases/$(db)/documents/providers/$(request.resource.data.providerId)).data.ownerUid == request.auth.uid
+        && request.resource.data.amount is number && request.resource.data.amount >= 0
+        && request.resource.data.days is int && request.resource.data.days > 0 && request.resource.data.days <= 3700
+        && req(request.resource.data.slipId, 1, 64)
+        && !request.resource.data.keys().hasAny(["until", "reviewedAt", "reason"])
+        && nearNow(request.resource.data.createdAt);
+      allow read: if isAdmin() || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // Everything else is closed.
+  }
+}
